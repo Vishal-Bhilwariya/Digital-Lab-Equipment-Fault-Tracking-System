@@ -11,7 +11,8 @@ import {
   AlertCircle,
   X,
   Search,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 import { OperationalStatusBadge, CalibrationStatusBadge } from '../../utils/statusBadges';
 
@@ -144,17 +145,26 @@ const EquipmentManagement = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full space-y-7">
+      
+      {/* Header Banner */}
+      <div className="relative rounded-3xl p-7 border border-white/10 bg-gradient-to-r from-[#111f38]/90 via-[#0d192e]/90 to-[#0a1426]/90 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Equipment Inventory</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Sorted by lifetime damageCount (Descending) to instantly highlight frequently broken hardware.
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-[11px] font-bold tracking-wider uppercase mb-2">
+            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+            LABORATORY INVENTORY
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Equipment Inventory
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Sorted in descending order of lifetime damageCount to instantly prioritize hardware inspection and replacement.
           </p>
         </div>
+
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5 shrink-0 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Add Equipment
@@ -162,99 +172,99 @@ const EquipmentManagement = () => {
       </div>
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
           <span>{successMsg}</span>
         </div>
       )}
 
-      {/* Search and Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex items-center justify-between gap-4">
+      {/* Search and Count Bar */}
+      <div className="rounded-2xl p-4 border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative w-full max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-cyan-400 absolute left-3.5 top-3" />
           <input
             type="text"
             placeholder="Search by equipment name or serial number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+            className="w-full bg-[#081124] border border-white/15 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
           />
         </div>
-        <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
-          {equipment.length} items in inventory
+        <span className="text-xs font-semibold text-slate-400 font-mono">
+          Showing <span className="text-cyan-400 font-bold">{equipment.length}</span> instruments in inventory
         </span>
       </div>
 
       {/* Equipment Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="rounded-3xl border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+            <thead className="bg-white/[0.03] text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="px-5 py-3">Equipment Details</th>
-                <th className="px-5 py-3">Location / Bench</th>
-                <th className="px-5 py-3">Operational Status</th>
-                <th className="px-5 py-3">Calibration Status</th>
-                <th className="px-5 py-3 text-center">Damage Count</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-6 py-4">Equipment Details</th>
+                <th className="px-6 py-4">Bench Location</th>
+                <th className="px-6 py-4">Operational Status</th>
+                <th className="px-6 py-4">Calibration Status</th>
+                <th className="px-6 py-4 text-center">Damage Count</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/[0.06]">
               {equipment.length > 0 ? (
                 equipment.map((eq) => (
-                  <tr key={eq._id} className="hover:bg-slate-50/80 transition">
-                    <td className="px-5 py-3">
-                      <span className="font-bold text-slate-900 block">{eq.name}</span>
-                      <span className="font-mono text-[11px] text-slate-500">
+                  <tr key={eq._id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-white block text-sm">{eq.name}</span>
+                      <span className="font-mono text-[11px] text-slate-400">
                         SN: {eq.serialNumber} {eq.model ? `• ${eq.model}` : ''}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-slate-600 font-medium">{eq.location}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-6 py-4 text-slate-300 font-medium">{eq.location}</td>
+                    <td className="px-6 py-4">
                       <OperationalStatusBadge status={eq.operationalStatus} />
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-6 py-4">
                       <CalibrationStatusBadge
                         status={eq.calibrationHealth?.status}
                         daysRemaining={eq.calibrationHealth?.daysRemaining}
                       />
                     </td>
-                    <td className="px-5 py-3 text-center">
+                    <td className="px-6 py-4 text-center">
                       <span
-                        className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold font-mono ${
+                        className={`inline-block px-3 py-1 rounded-lg text-xs font-bold font-mono border ${
                           eq.damageCount > 0
-                            ? 'bg-rose-100 text-rose-700'
-                            : 'bg-slate-100 text-slate-600'
+                            ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                            : 'bg-slate-800 border-white/10 text-slate-300'
                         }`}
                       >
                         {eq.damageCount}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right space-x-1.5 whitespace-nowrap">
+                    <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
                       {/* Generate QR Button */}
                       <button
                         onClick={() => handleOpenQr(eq._id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-[11px] font-semibold transition"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 rounded-lg text-xs font-bold transition"
                         title="Generate & Print QR Code"
                       >
                         <QrCode className="w-3.5 h-3.5" />
-                        QR Label
+                        QR Sticker
                       </button>
 
                       {/* Edit Button */}
                       <button
                         onClick={() => handleOpenEdit(eq)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold transition"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/15 text-slate-200 rounded-lg text-xs font-semibold transition"
                         title="Update Status / Location"
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <Edit2 className="w-3.5 h-3.5 text-slate-400" />
                         Edit
                       </button>
 
                       {/* Archive Button */}
                       <button
                         onClick={() => handleArchive(eq._id, eq.name)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded text-[11px] font-semibold transition"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-semibold transition"
                         title="Archive Equipment"
                       >
                         <Archive className="w-3.5 h-3.5" />
@@ -264,7 +274,7 @@ const EquipmentManagement = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan="6" className="px-6 py-10 text-center text-slate-400">
                     No equipment found. Click "Add Equipment" to register your first instrument.
                   </td>
                 </tr>
@@ -276,18 +286,18 @@ const EquipmentManagement = () => {
 
       {/* QR Code Modal (High-Contrast Printable Sticker) */}
       {showQrModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative text-center">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-sm p-6 sm:p-7 shadow-2xl relative text-center text-white">
             <button
               onClick={() => setShowQrModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="font-bold text-base text-slate-900 mb-1">Equipment QR Sticker</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Print and affix this label onto the physical equipment casing.
+            <h3 className="font-bold text-lg text-white mb-1">Equipment QR Sticker</h3>
+            <p className="text-xs text-slate-400 mb-5">
+              Print and affix this sticker onto the physical equipment casing.
             </p>
 
             {qrLoading || !qrData ? (
@@ -296,7 +306,7 @@ const EquipmentManagement = () => {
               <div>
                 <div
                   id="printable-qr"
-                  className="bg-white border-2 border-slate-900 rounded-xl p-4 inline-block shadow-sm mb-4"
+                  className="bg-white text-slate-900 border-2 border-slate-900 rounded-2xl p-5 inline-block shadow-lg mb-5"
                 >
                   <p className="text-[11px] font-black tracking-widest text-slate-900 uppercase">
                     {qrData.labName}
@@ -304,21 +314,21 @@ const EquipmentManagement = () => {
                   <img
                     src={qrData.qrDataUrl}
                     alt="Equipment QR Code"
-                    className="w-48 h-48 mx-auto my-2 border border-slate-200 rounded-lg"
+                    className="w-48 h-48 mx-auto my-2 border border-slate-200 rounded-xl"
                   />
                   <p className="font-bold text-xs text-slate-900 truncate max-w-[200px] mx-auto">
                     {qrData.name}
                   </p>
                   <p className="font-mono text-[10px] text-slate-600">SN: {qrData.serialNumber}</p>
-                  <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-tight font-semibold">
+                  <p className="text-[9px] text-slate-500 mt-1 uppercase tracking-tight font-bold">
                     Scan via Google Lens
                   </p>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <button
                     onClick={() => window.print()}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition"
                   >
                     <Printer className="w-4 h-4" />
                     Print Sticker Label
@@ -328,7 +338,7 @@ const EquipmentManagement = () => {
                     href={qrData.targetUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-slate-600 hover:text-blue-600 transition"
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition"
                   >
                     Open Public Mobile View <ExternalLink className="w-3.5 h-3.5" />
                   </a>
@@ -341,83 +351,91 @@ const EquipmentManagement = () => {
 
       {/* Add Equipment Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-md p-6 sm:p-7 shadow-2xl relative text-white">
             <button
               onClick={() => setShowAddModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Cpu className="w-5 h-5" />
+            <div className="flex items-center gap-3.5 mb-5">
+              <div className="w-11 h-11 rounded-2xl bg-cyan-500/15 border border-cyan-400/25 text-cyan-400 flex items-center justify-center">
+                <Cpu className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-slate-900">Register New Equipment</h3>
-                <p className="text-xs text-slate-500">Auto-initializes damageCount=0 and creates QR link</p>
+                <h3 className="font-bold text-lg text-white">Register Equipment</h3>
+                <p className="text-xs text-slate-400">Initializes damageCount=0 and generates QR code</p>
               </div>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleCreateEquipment} className="space-y-3.5">
+            <form onSubmit={handleCreateEquipment} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Equipment Name</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Equipment Name
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Digital Storage Oscilloscope 100MHz"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Serial Number</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Serial Number
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. TEK-2024-902"
                     value={serialNumber}
                     onChange={(e) => setSerialNumber(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 font-mono"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Model (Optional)</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Model (Optional)
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. TBS1102B"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Bench / Room Location</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Bench / Room Location
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Bench 04, Electronics Lab"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                   Calibration Interval (Days)
                 </label>
                 <input
@@ -426,25 +444,22 @@ const EquipmentManagement = () => {
                   min="1"
                   value={calibrationIntervalDays}
                   onChange={(e) => setCalibrationIntervalDays(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
-                <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Standard interval (e.g. 180 days = 6 months)
-                </span>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="pt-3 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitLoading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition disabled:opacity-50"
                 >
                   {submitLoading ? 'Registering...' : 'Register Equipment'}
                 </button>
@@ -456,56 +471,58 @@ const EquipmentManagement = () => {
 
       {/* Edit Equipment Modal */}
       {showEditModal && selectedItem && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-md p-6 sm:p-7 shadow-2xl relative text-white">
             <button
               onClick={() => setShowEditModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="font-bold text-base text-slate-900 mb-1">Update Equipment</h3>
-            <p className="text-xs text-slate-500 mb-4">{selectedItem.name}</p>
+            <h3 className="font-bold text-lg text-white mb-1">Update Equipment</h3>
+            <p className="text-xs text-slate-400 mb-5">{selectedItem.name}</p>
 
             <form onSubmit={handleUpdateEquipment} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                   Operational Status (Independent from Calibration)
                 </label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400 transition"
                 >
-                  <option value="Ready to Use">Ready to Use</option>
-                  <option value="Under Repair">Under Repair</option>
-                  <option value="Damaged">Damaged</option>
+                  <option value="Ready to Use" className="bg-slate-900 text-white">Ready to Use</option>
+                  <option value="Under Repair" className="bg-slate-900 text-white">Under Repair</option>
+                  <option value="Damaged" className="bg-slate-900 text-white">Damaged</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Location / Bench</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Location / Bench
+                </label>
                 <input
                   type="text"
                   required
                   value={editLocation}
                   onChange={(e) => setEditLocation(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="pt-3 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition"
                 >
                   Save Changes
                 </button>

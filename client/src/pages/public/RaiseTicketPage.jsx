@@ -4,12 +4,11 @@ import api from '../../services/api';
 import {
   Wrench,
   Camera,
-  Upload,
   CheckCircle2,
   AlertCircle,
   ArrowLeft,
   Copy,
-  Clock
+  Sparkles
 } from 'lucide-react';
 
 const RaiseTicketPage = () => {
@@ -103,11 +102,17 @@ const RaiseTicketPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4 flex flex-col justify-between">
-      <div className="max-w-md mx-auto w-full">
+    <div className="min-h-screen bg-[#080F20] text-white py-10 px-4 flex flex-col justify-between relative selection:bg-cyan-500/30 selection:text-cyan-200">
+      
+      {/* Background glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-10 right-1/4 w-[350px] h-[350px] bg-rose-600/10 rounded-full blur-[100px]" />
+      </div>
+
+      <div className="max-w-md mx-auto w-full relative z-10">
         <Link
           to={`/equipment/${publicId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 mb-4 transition"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-cyan-300 mb-5 transition"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Equipment View
@@ -115,44 +120,44 @@ const RaiseTicketPage = () => {
 
         {submittedTicket ? (
           /* Confirmation Screen */
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl text-center space-y-4">
-            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-              <CheckCircle2 className="w-8 h-8" />
+          <div className="bg-[#0f1d38]/90 border border-white/15 rounded-3xl p-7 shadow-2xl backdrop-blur-xl text-center space-y-5">
+            <div className="w-16 h-16 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <CheckCircle2 className="w-9 h-9" />
             </div>
 
-            <h2 className="text-xl font-bold text-slate-900">Fault Ticket Submitted!</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Your report has been dispatched directly to the lab technician. Please save your Ticket Reference ID below for tracking:
+            <h2 className="text-2xl font-extrabold text-white">Fault Ticket Submitted!</h2>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Your report has been dispatched to the lab technician. Please copy and save your Ticket Reference ID for tracking:
             </p>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">
+            <div className="p-4 bg-[#081124] rounded-2xl border border-white/10 flex items-center justify-between">
+              <div className="text-left">
+                <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
                   Ticket Reference ID
                 </span>
-                <span className="font-mono text-base font-bold text-blue-600">
+                <span className="font-mono text-base font-bold text-cyan-400">
                   {submittedTicket.ticketId}
                 </span>
               </div>
               <button
                 onClick={handleCopyId}
-                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-xs font-medium text-slate-700 flex items-center gap-1 transition"
+                className="px-3 py-1.5 bg-white/10 border border-white/15 hover:bg-white/15 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition"
               >
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="w-3.5 h-3.5 text-cyan-400" />
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
 
-            <div className="pt-3 space-y-2">
+            <div className="pt-2 space-y-2.5">
               <Link
                 to={`/track-ticket?ticketId=${submittedTicket.ticketId}&rollNumber=${rollNumber}`}
-                className="w-full inline-block py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-md shadow-blue-600/20"
+                className="w-full inline-block py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-cyan-500/20"
               >
                 Track Repair Progress
               </Link>
               <Link
                 to="/"
-                className="w-full inline-block py-2 text-xs text-slate-500 hover:text-slate-800 transition"
+                className="w-full inline-block py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
               >
                 Return to Home
               </Link>
@@ -160,66 +165,72 @@ const RaiseTicketPage = () => {
           </div>
         ) : (
           /* Ticket Submission Form */
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl space-y-5">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+          <div className="bg-[#0f1d38]/90 border border-white/15 rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl space-y-5">
+            <div className="flex items-center gap-3.5 border-b border-white/10 pb-4">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
                 <Wrench className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-900">Report Broken Equipment</h2>
-                <p className="text-xs text-slate-500">
-                  {equipment ? `${equipment.name} (${equipment.labName})` : 'Loading...'}
+                <h2 className="text-base font-bold text-white">Report Broken Equipment</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {equipment ? `${equipment.name} (${equipment.labName})` : 'Loading equipment details...'}
                 </p>
               </div>
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3.5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Your Full Name</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Your Full Name
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Mohit Kumar"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Roll Number</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Roll Number
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. 2315001383"
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 font-mono"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mobile Number</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Mobile Number
+                  </label>
                   <input
                     type="tel"
                     required
                     placeholder="e.g. 9876543210"
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                   Email Address (Optional)
                 </label>
                 <input
@@ -227,13 +238,13 @@ const RaiseTicketPage = () => {
                   placeholder="e.g. student@univ.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Describe What Happened / Damage Details
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Describe Fault / Damage
                 </label>
                 <textarea
                   rows="3"
@@ -241,16 +252,16 @@ const RaiseTicketPage = () => {
                   placeholder="e.g. Channel 1 probe jack is loose and displaying noise artifacts. Screen flickers on power-up."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 ></textarea>
               </div>
 
               {/* Damage Photo Upload */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                   Photograph of Damaged Equipment (Required)
                 </label>
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-3 text-center bg-slate-50 hover:bg-slate-100/70 transition cursor-pointer relative">
+                <div className="border-2 border-dashed border-white/20 rounded-2xl p-4 text-center bg-[#081124] hover:bg-white/[0.04] transition cursor-pointer relative">
                   <input
                     type="file"
                     accept="image/*"
@@ -263,19 +274,19 @@ const RaiseTicketPage = () => {
                       <img
                         src={previewUrl}
                         alt="Damage preview"
-                        className="w-32 h-32 object-cover mx-auto rounded-lg border border-slate-200"
+                        className="w-32 h-32 object-cover mx-auto rounded-xl border border-white/15 shadow"
                       />
-                      <span className="text-[11px] text-blue-600 font-semibold block">
+                      <span className="text-xs text-cyan-400 font-bold block">
                         Change Photo
                       </span>
                     </div>
                   ) : (
-                    <div className="py-3">
-                      <Camera className="w-8 h-8 text-slate-400 mx-auto mb-1" />
-                      <span className="text-xs font-semibold text-slate-700 block">
+                    <div className="py-4">
+                      <Camera className="w-8 h-8 text-cyan-400 mx-auto mb-1.5" />
+                      <span className="text-xs font-bold text-white block">
                         Tap to Snap Photo with Camera
                       </span>
-                      <span className="text-[10px] text-slate-400">or upload from device gallery</span>
+                      <span className="text-[11px] text-slate-400">or upload from device gallery</span>
                     </div>
                   )}
                 </div>
@@ -284,7 +295,7 @@ const RaiseTicketPage = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-rose-600/20 disabled:opacity-50 mt-4"
+                className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-rose-600/30 disabled:opacity-50 mt-4"
               >
                 {submitting ? 'Submitting Report...' : 'Submit Fault Ticket'}
               </button>
@@ -293,8 +304,8 @@ const RaiseTicketPage = () => {
         )}
       </div>
 
-      <footer className="text-center text-[11px] text-slate-400 py-4 mt-8">
-        Local Lab Equipment Calibration & Fault Tracking System
+      <footer className="text-center text-[11px] text-slate-500 py-4 mt-8 relative z-10">
+        Local Lab Equipment Calibration & Fault Tracking System • Group G137
       </footer>
     </div>
   );

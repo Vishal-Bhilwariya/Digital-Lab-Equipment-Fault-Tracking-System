@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Building2, Plus, Archive, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Building2, Plus, Archive, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 
 const ManageLabs = () => {
   const [labs, setLabs] = useState([]);
@@ -34,7 +34,7 @@ const ManageLabs = () => {
 
     try {
       await api.post('/labs', { labName, labBlock });
-      setSuccessMsg(`Laboratory '${labName}' registered with an auto-generated Lab ID.`);
+      setSuccessMsg(`Laboratory '${labName}' registered with an auto-generated unique Lab ID.`);
       setLabName('');
       setLabBlock('');
       setShowAddModal(false);
@@ -48,7 +48,7 @@ const ManageLabs = () => {
   };
 
   const handleArchiveLab = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to archive '${name}'? Existing equipment and tickets will remain safe for audit compliance.`)) {
+    if (!window.confirm(`Are you sure you want to archive '${name}'? Existing equipment and records remain safe for audit compliance.`)) {
       return;
     }
 
@@ -63,17 +63,26 @@ const ManageLabs = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full space-y-7">
+      
+      {/* Header Banner */}
+      <div className="relative rounded-3xl p-7 border border-white/10 bg-gradient-to-r from-[#111f38]/90 via-[#0d192e]/90 to-[#0a1426]/90 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Laboratories Directory</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Create physical laboratory departments. The system auto-generates unique string identifiers (e.g. LAB-A8F21).
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-[11px] font-bold tracking-wider uppercase mb-2">
+            <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+            LABORATORY REGISTRY
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Laboratories Directory
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Create physical laboratory departments. The system automatically assigns a unique string identifier (e.g. LAB-A8F21).
           </p>
         </div>
+
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5 shrink-0 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Add New Laboratory
@@ -81,48 +90,49 @@ const ManageLabs = () => {
       </div>
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {/* Labs Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="rounded-3xl border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+            <thead className="bg-white/[0.03] text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="px-5 py-3">Lab ID</th>
-                <th className="px-5 py-3">Laboratory Name</th>
-                <th className="px-5 py-3">Block / Building</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-6 py-4">Lab ID (Auto-Generated)</th>
+                <th className="px-6 py-4">Laboratory Name</th>
+                <th className="px-6 py-4">Block / Building</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/[0.06]">
               {labs.length > 0 ? (
                 labs.map((lab) => (
-                  <tr key={lab._id} className="hover:bg-slate-50/80 transition">
-                    <td className="px-5 py-3 font-mono font-bold text-blue-600">{lab.labId}</td>
-                    <td className="px-5 py-3 font-semibold text-slate-900">{lab.labName}</td>
-                    <td className="px-5 py-3 text-slate-600">{lab.labBlock}</td>
-                    <td className="px-5 py-3">
+                  <tr key={lab._id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="px-6 py-4 font-mono font-bold text-cyan-400 text-sm">{lab.labId}</td>
+                    <td className="px-6 py-4 font-bold text-white text-sm">{lab.labName}</td>
+                    <td className="px-6 py-4 text-slate-300">{lab.labBlock}</td>
+                    <td className="px-6 py-4">
                       {lab.isActive ? (
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                           Active
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-white/10">
                           Archived
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="px-6 py-4 text-right">
                       {lab.isActive && (
                         <button
                           onClick={() => handleArchiveLab(lab._id, lab.labName)}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded transition"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 px-3 py-1.5 rounded-lg transition"
                         >
                           <Archive className="w-3.5 h-3.5" />
                           Archive
@@ -133,8 +143,8 @@ const ManageLabs = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-5 py-8 text-center text-slate-400">
-                    No laboratories found. Click "Add New Laboratory" to get started.
+                  <td colSpan="5" className="px-6 py-10 text-center text-slate-400">
+                    No laboratories registered yet. Click "Add New Laboratory" to register your first lab.
                   </td>
                 </tr>
               )}
@@ -145,27 +155,27 @@ const ManageLabs = () => {
 
       {/* Add Lab Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-md p-6 sm:p-7 shadow-2xl relative text-white">
             <button
               onClick={() => setShowAddModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Building2 className="w-5 h-5" />
+            <div className="flex items-center gap-3.5 mb-5">
+              <div className="w-11 h-11 rounded-2xl bg-cyan-500/15 border border-cyan-400/25 text-cyan-400 flex items-center justify-center">
+                <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-slate-900">Add New Laboratory</h3>
-                <p className="text-xs text-slate-500">System will automatically assign a unique Lab ID</p>
+                <h3 className="font-bold text-lg text-white">Add New Laboratory</h3>
+                <p className="text-xs text-slate-400">System will assign a unique identifier</p>
               </div>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -173,41 +183,45 @@ const ManageLabs = () => {
 
             <form onSubmit={handleCreateLab} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Laboratory Name</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Laboratory Name
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Physics Laboratory 1"
                   value={labName}
                   onChange={(e) => setLabName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Block / Building</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Block / Building
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Block C, 2nd Floor"
                   value={labBlock}
                   onChange={(e) => setLabBlock(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="pt-3 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitLoading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition disabled:opacity-50"
                 >
                   {submitLoading ? 'Registering...' : 'Create Laboratory'}
                 </button>

@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { FileSpreadsheet, ShieldAlert, CheckCircle2, AlertOctagon, Wrench, RefreshCw } from 'lucide-react';
+import {
+  FileSpreadsheet,
+  ShieldCheck,
+  CheckCircle2,
+  AlertOctagon,
+  RefreshCw,
+  Sparkles,
+  Layers3
+} from 'lucide-react';
 import { OperationalStatusBadge, CalibrationStatusBadge, TicketStatusBadge } from '../../utils/statusBadges';
 
 const AdminReports = () => {
@@ -30,103 +38,108 @@ const AdminReports = () => {
   }, []);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full space-y-7">
+      
+      {/* Header Banner */}
+      <div className="relative rounded-3xl p-7 border border-white/10 bg-gradient-to-r from-[#111f38]/90 via-[#0d192e]/90 to-[#0a1426]/90 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold mb-1">
-            <ShieldAlert className="w-3.5 h-3.5 text-blue-600" />
-            Read-Only Audit Reports
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-[11px] font-bold tracking-wider uppercase mb-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+            READ-ONLY AUDIT REPORTS
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Institutional Lab Audit Reports</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Global compliance reports across all laboratories. Modifications are strictly reserved for assigned Lab Assistants.
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Institutional Compliance Reports
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Global audit records across all campus laboratories. Modifications are strictly reserved for assigned Lab Assistants.
           </p>
         </div>
+
         <button
           onClick={fetchReports}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold shadow-sm transition"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/15 text-white rounded-xl text-xs font-bold transition shrink-0 self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Data
+          <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Ledger
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 gap-4">
+      <div className="flex border-b border-white/10 gap-3">
         <button
           onClick={() => setActiveTab('calibrated')}
-          className={`pb-3 text-xs font-bold transition border-b-2 flex items-center gap-2 ${
+          className={`pb-3.5 text-xs font-bold transition border-b-2 flex items-center gap-2 px-2 ${
             activeTab === 'calibrated'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-cyan-400 text-cyan-300'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <CheckCircle2 className="w-4 h-4" />
-          Calibrated Equipments Ledger ({calibratedData.length})
+          <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+          Calibrated Equipments ({calibratedData.length})
         </button>
         <button
           onClick={() => setActiveTab('damaged')}
-          className={`pb-3 text-xs font-bold transition border-b-2 flex items-center gap-2 ${
+          className={`pb-3.5 text-xs font-bold transition border-b-2 flex items-center gap-2 px-2 ${
             activeTab === 'damaged'
-              ? 'border-rose-600 text-rose-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-rose-400 text-rose-300'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <AlertOctagon className="w-4 h-4" />
-          Damaged & Under Repair Queue ({damagedData.damagedEquipment?.length || 0})
+          <AlertOctagon className="w-4 h-4 text-rose-400" />
+          Damaged & Repair Queue ({damagedData.damagedEquipment?.length || 0})
         </button>
       </div>
 
       {/* Tab 1: Calibrated Equipments */}
       {activeTab === 'calibrated' && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="rounded-3xl border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl shadow-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+              <thead className="bg-white/[0.03] text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="px-5 py-3">Equipment</th>
-                  <th className="px-5 py-3">Laboratory</th>
-                  <th className="px-5 py-3">Location / Bench</th>
-                  <th className="px-5 py-3">Last Calibrated</th>
-                  <th className="px-5 py-3">Next Due Date</th>
-                  <th className="px-5 py-3">Calibration Status</th>
-                  <th className="px-5 py-3">Operational</th>
+                  <th className="px-6 py-4">Equipment Details</th>
+                  <th className="px-6 py-4">Laboratory</th>
+                  <th className="px-6 py-4">Bench Location</th>
+                  <th className="px-6 py-4">Last Calibrated</th>
+                  <th className="px-6 py-4">Next Due Date</th>
+                  <th className="px-6 py-4">Calibration Status</th>
+                  <th className="px-6 py-4">Operational Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/[0.06]">
                 {calibratedData.length > 0 ? (
                   calibratedData.map((item) => (
-                    <tr key={item._id} className="hover:bg-slate-50/80 transition">
-                      <td className="px-5 py-3">
-                        <span className="font-semibold text-slate-900 block">{item.name}</span>
-                        <span className="font-mono text-[11px] text-slate-500">{item.serialNumber}</span>
+                    <tr key={item._id} className="hover:bg-white/[0.03] transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-white block text-sm">{item.name}</span>
+                        <span className="font-mono text-[11px] text-slate-400">{item.serialNumber}</span>
                       </td>
-                      <td className="px-5 py-3 text-slate-700">
+                      <td className="px-6 py-4 text-slate-300 font-medium">
                         {item.labId?.labName}
-                        <span className="block text-[11px] text-slate-400">({item.labId?.labId})</span>
+                        <span className="block text-[10px] text-slate-400 font-mono">({item.labId?.labId})</span>
                       </td>
-                      <td className="px-5 py-3 text-slate-600">{item.location}</td>
-                      <td className="px-5 py-3 text-slate-600">
+                      <td className="px-6 py-4 text-slate-300">{item.location}</td>
+                      <td className="px-6 py-4 text-slate-300">
                         {new Date(item.lastCalibrationDate).toLocaleDateString()}
                       </td>
-                      <td className="px-5 py-3 font-semibold text-slate-800">
+                      <td className="px-6 py-4 font-bold text-white">
                         {new Date(item.nextCalibrationDate).toLocaleDateString()}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4">
                         <CalibrationStatusBadge
                           status={item.calibrationHealth?.status}
                           daysRemaining={item.calibrationHealth?.daysRemaining}
                         />
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4">
                         <OperationalStatusBadge status={item.operationalStatus} />
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-5 py-8 text-center text-slate-400">
+                    <td colSpan="7" className="px-6 py-10 text-center text-slate-400">
                       No calibration records found.
                     </td>
                   </tr>
@@ -137,48 +150,54 @@ const AdminReports = () => {
         </div>
       )}
 
-      {/* Tab 2: Damaged Equipments & Faults */}
+      {/* Tab 2: Damaged & Repair Queue */}
       {activeTab === 'damaged' && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 bg-rose-50/60 border-b border-rose-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-900">
+        <div className="space-y-7">
+          
+          {/* Damaged Instruments Table */}
+          <div className="rounded-3xl border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+            <div className="p-5 bg-rose-500/[0.08] border-b border-rose-500/20 flex items-center justify-between">
+              <span className="text-xs font-bold text-rose-300 uppercase tracking-wider flex items-center gap-2">
+                <AlertOctagon className="w-4 h-4 text-rose-400" />
                 Damaged & Under Repair Instruments
               </span>
-              <span className="text-[11px] text-rose-700 font-semibold">
+              <span className="text-[11px] text-rose-300 font-mono">
                 Sorted by damageCount (Descending)
               </span>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                <thead className="bg-white/[0.03] text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="px-5 py-3">Instrument</th>
-                    <th className="px-5 py-3">Laboratory</th>
-                    <th className="px-5 py-3">Location</th>
-                    <th className="px-5 py-3">Operational Status</th>
-                    <th className="px-5 py-3 text-right">Lifetime Damage Count</th>
+                    <th className="px-6 py-4">Instrument</th>
+                    <th className="px-6 py-4">Laboratory</th>
+                    <th className="px-6 py-4">Location</th>
+                    <th className="px-6 py-4">Operational Status</th>
+                    <th className="px-6 py-4 text-right">Lifetime Damage Count</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-white/[0.06]">
                   {damagedData.damagedEquipment?.length > 0 ? (
                     damagedData.damagedEquipment.map((eq) => (
-                      <tr key={eq._id} className="hover:bg-slate-50/80 transition">
-                        <td className="px-5 py-3 font-semibold text-slate-900">{eq.name}</td>
-                        <td className="px-5 py-3 text-slate-600">{eq.labId?.labName}</td>
-                        <td className="px-5 py-3 text-slate-600">{eq.location}</td>
-                        <td className="px-5 py-3">
+                      <tr key={eq._id} className="hover:bg-white/[0.03] transition-colors">
+                        <td className="px-6 py-4 font-bold text-white text-sm">{eq.name}</td>
+                        <td className="px-6 py-4 text-slate-300">{eq.labId?.labName}</td>
+                        <td className="px-6 py-4 text-slate-300">{eq.location}</td>
+                        <td className="px-6 py-4">
                           <OperationalStatusBadge status={eq.operationalStatus} />
                         </td>
-                        <td className="px-5 py-3 text-right font-mono font-bold text-rose-600">
-                          {eq.damageCount} times
+                        <td className="px-6 py-4 text-right font-mono font-bold text-rose-300">
+                          <span className="inline-block px-3 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30">
+                            {eq.damageCount} times
+                          </span>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-5 py-8 text-center text-slate-400">
-                        No equipment currently marked as Damaged or Under Repair!
+                      <td colSpan="5" className="px-6 py-10 text-center text-slate-400">
+                        No equipment currently marked as Damaged or Under Repair.
                       </td>
                     </tr>
                   )}
@@ -188,43 +207,47 @@ const AdminReports = () => {
           </div>
 
           {/* Active Fault Tickets Queue */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-200">
-              <h3 className="text-xs font-bold text-slate-900">Active Fault Tickets Submitted by Students</h3>
+          <div className="rounded-3xl border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-white/10 bg-white/[0.02]">
+              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                <Layers3 className="w-4 h-4 text-cyan-400" />
+                Active Fault Tickets Submitted by Students
+              </h3>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                <thead className="bg-white/[0.03] text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="px-5 py-3">Ticket ID</th>
-                    <th className="px-5 py-3">Equipment</th>
-                    <th className="px-5 py-3">Reporter (Roll No)</th>
-                    <th className="px-5 py-3">Fault Description</th>
-                    <th className="px-5 py-3">Raised At</th>
-                    <th className="px-5 py-3">Ticket Status</th>
+                    <th className="px-6 py-4">Ticket ID</th>
+                    <th className="px-6 py-4">Equipment</th>
+                    <th className="px-6 py-4">Student Reporter</th>
+                    <th className="px-6 py-4">Fault Description</th>
+                    <th className="px-6 py-4">Raised On</th>
+                    <th className="px-6 py-4">Ticket Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-white/[0.06]">
                   {damagedData.activeTickets?.length > 0 ? (
                     damagedData.activeTickets.map((tkt) => (
-                      <tr key={tkt._id} className="hover:bg-slate-50/80 transition">
-                        <td className="px-5 py-3 font-mono font-bold text-blue-600">{tkt.ticketId}</td>
-                        <td className="px-5 py-3 font-medium text-slate-900">{tkt.equipmentId?.name}</td>
-                        <td className="px-5 py-3 text-slate-600">
-                          {tkt.studentName} ({tkt.rollNumber})
+                      <tr key={tkt._id} className="hover:bg-white/[0.03] transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-cyan-400 text-sm">{tkt.ticketId}</td>
+                        <td className="px-6 py-4 font-bold text-white">{tkt.equipmentId?.name}</td>
+                        <td className="px-6 py-4 text-slate-300">
+                          {tkt.studentName} <span className="font-mono text-slate-400">({tkt.rollNumber})</span>
                         </td>
-                        <td className="px-5 py-3 text-slate-700 max-w-xs truncate">{tkt.description}</td>
-                        <td className="px-5 py-3 text-slate-500">
+                        <td className="px-6 py-4 text-slate-300 max-w-xs truncate">{tkt.description}</td>
+                        <td className="px-6 py-4 text-slate-400">
                           {new Date(tkt.createdAt).toLocaleDateString()}
                         </td>
-                        <td className="px-5 py-3">
+                        <td className="px-6 py-4">
                           <TicketStatusBadge status={tkt.ticketStatus} />
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-5 py-8 text-center text-slate-400">
+                      <td colSpan="6" className="px-6 py-10 text-center text-slate-400">
                         No active fault tickets in queue.
                       </td>
                     </tr>

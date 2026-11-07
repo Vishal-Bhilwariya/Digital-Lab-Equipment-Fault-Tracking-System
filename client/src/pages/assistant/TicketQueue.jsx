@@ -10,7 +10,8 @@ import {
   User,
   Phone,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { TicketStatusBadge, OperationalStatusBadge } from '../../utils/statusBadges';
 
@@ -76,37 +77,51 @@ const TicketQueue = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full space-y-7">
+      
+      {/* Header Banner */}
+      <div className="relative rounded-3xl p-7 border border-white/10 bg-gradient-to-r from-[#111f38]/90 via-[#0d192e]/90 to-[#0a1426]/90 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Damaged Equipment & Tickets Queue</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Student fault reports with photographic evidence. Workflow: Open ➔ Under Review ➔ In Repair ➔ Resolved.
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-[11px] font-bold tracking-wider uppercase mb-2">
+            <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
+            REPAIR QUEUE LIFECYCLE
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Damaged Equipment & Fault Tickets
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Review student fault reports with photographic evidence. Workflow: Open ➔ Under Review ➔ In Repair ➔ Resolved.
           </p>
         </div>
 
         {/* Filter buttons */}
-        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 self-start sm:self-auto">
+        <div className="inline-flex rounded-xl border border-white/15 bg-[#081124] p-1.5 self-start sm:self-auto shrink-0">
           <button
             onClick={() => setFilter('active')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              filter === 'active' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+              filter === 'active'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Active Faults
           </button>
           <button
             onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              filter === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+              filter === 'all'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             All History
           </button>
           <button
             onClick={() => setFilter('Resolved')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              filter === 'Resolved' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+              filter === 'Resolved'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Resolved Only
@@ -115,53 +130,53 @@ const TicketQueue = () => {
       </div>
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {/* Tickets Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="rounded-3xl border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+            <thead className="bg-white/[0.03] text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="px-5 py-3">Ticket ID</th>
-                <th className="px-5 py-3">Equipment</th>
-                <th className="px-5 py-3">Student Reporter</th>
-                <th className="px-5 py-3">Reported Fault</th>
-                <th className="px-5 py-3">Raised On</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-6 py-4">Ticket ID</th>
+                <th className="px-6 py-4">Equipment</th>
+                <th className="px-6 py-4">Student Reporter</th>
+                <th className="px-6 py-4">Reported Fault</th>
+                <th className="px-6 py-4">Raised On</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/[0.06]">
               {tickets.length > 0 ? (
                 tickets.map((tkt) => (
-                  <tr key={tkt._id} className="hover:bg-slate-50/80 transition">
-                    <td className="px-5 py-3 font-mono font-bold text-blue-600">{tkt.ticketId}</td>
-                    <td className="px-5 py-3">
-                      <span className="font-semibold text-slate-900 block">{tkt.equipmentId?.name}</span>
-                      <span className="text-[11px] text-slate-500 font-mono">
+                  <tr key={tkt._id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="px-6 py-4 font-mono font-bold text-cyan-400 text-sm">{tkt.ticketId}</td>
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-white block text-sm">{tkt.equipmentId?.name}</span>
+                      <span className="text-[11px] text-slate-400 font-mono">
                         {tkt.equipmentId?.location}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
-                      <span className="font-semibold text-slate-800 block">{tkt.studentName}</span>
-                      <span className="font-mono text-[11px] text-slate-500">Roll: {tkt.rollNumber}</span>
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-white block">{tkt.studentName}</span>
+                      <span className="font-mono text-[11px] text-slate-400">Roll: {tkt.rollNumber}</span>
                     </td>
-                    <td className="px-5 py-3 text-slate-700 max-w-xs truncate">{tkt.description}</td>
-                    <td className="px-5 py-3 text-slate-500">
+                    <td className="px-6 py-4 text-slate-300 max-w-xs truncate">{tkt.description}</td>
+                    <td className="px-6 py-4 text-slate-400">
                       {new Date(tkt.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-6 py-4">
                       <TicketStatusBadge status={tkt.ticketStatus} />
                     </td>
-                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
                       <button
                         onClick={() => handleOpenDetail(tkt)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-[11px] font-semibold transition"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-lg text-xs font-bold shadow transition"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         Inspect & Resolve
@@ -171,7 +186,7 @@ const TicketQueue = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan="7" className="px-6 py-10 text-center text-slate-400">
                     No tickets found in this queue.
                   </td>
                 </tr>
@@ -183,35 +198,35 @@ const TicketQueue = () => {
 
       {/* Ticket Details & Action Modal */}
       {showModal && selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-7 shadow-2xl relative text-white">
             <button
               onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-5">
               <div>
-                <span className="font-mono font-bold text-xs text-blue-600 block">
+                <span className="font-mono font-bold text-xs text-cyan-400 block">
                   {selectedTicket.ticketId}
                 </span>
-                <h3 className="font-bold text-lg text-slate-900 mt-0.5">
+                <h3 className="font-bold text-xl text-white mt-1">
                   {selectedTicket.equipmentId?.name}
                 </h3>
-                <p className="text-xs text-slate-500">Location: {selectedTicket.equipmentId?.location}</p>
+                <p className="text-xs text-slate-400">Location: {selectedTicket.equipmentId?.location}</p>
               </div>
               <TicketStatusBadge status={selectedTicket.ticketStatus} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
               {/* Damage Photograph */}
               <div>
-                <span className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <span className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
                   Uploaded Damage Photo
                 </span>
-                <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-100 h-52 flex items-center justify-center">
+                <div className="rounded-2xl border border-white/15 overflow-hidden bg-[#081124] h-56 flex items-center justify-center">
                   {selectedTicket.photoUrl ? (
                     <img
                       src={selectedTicket.photoUrl}
@@ -219,30 +234,34 @@ const TicketQueue = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-xs text-slate-400">No photo available</span>
+                    <span className="text-xs text-slate-500">No photograph attached</span>
                   )}
                 </div>
               </div>
 
               {/* Student & Fault Info */}
-              <div className="space-y-3 text-xs">
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
-                  <span className="font-bold text-slate-700 block">Student Information:</span>
-                  <p className="text-slate-600 flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-slate-400" /> {selectedTicket.studentName} (Roll: {selectedTicket.rollNumber})
+              <div className="space-y-3.5 text-xs">
+                <div className="p-4 rounded-2xl bg-[#081124] border border-white/10 space-y-1.5">
+                  <span className="font-bold text-slate-300 uppercase tracking-wider text-[10px] block">
+                    Student Details:
+                  </span>
+                  <p className="text-white font-semibold flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-cyan-400" /> {selectedTicket.studentName} (Roll: {selectedTicket.rollNumber})
                   </p>
-                  <p className="text-slate-600 flex items-center gap-1.5">
+                  <p className="text-slate-300 flex items-center gap-2 font-mono">
                     <Phone className="w-3.5 h-3.5 text-slate-400" /> {selectedTicket.mobile}
                   </p>
-                  <p className="text-slate-500 flex items-center gap-1.5 text-[11px]">
+                  <p className="text-slate-400 flex items-center gap-2 text-[11px] pt-1">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" /> Submitted:{' '}
                     {new Date(selectedTicket.createdAt).toLocaleString()}
                   </p>
                 </div>
 
                 <div>
-                  <span className="block font-semibold text-slate-700 mb-1">Fault Description:</span>
-                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 leading-relaxed">
+                  <span className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1.5">
+                    Fault Description:
+                  </span>
+                  <div className="p-3.5 rounded-2xl bg-[#081124] border border-white/10 text-slate-200 leading-relaxed text-xs">
                     {selectedTicket.description}
                   </div>
                 </div>
@@ -250,69 +269,70 @@ const TicketQueue = () => {
             </div>
 
             {/* Workflow Action Form */}
-            <form onSubmit={handleUpdateStatus} className="border-t border-slate-200 pt-4 space-y-3.5">
-              <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider">
-                Update Ticket & Equipment Lifecycle
+            <form onSubmit={handleUpdateStatus} className="border-t border-white/10 pt-5 space-y-4">
+              <h4 className="font-bold text-xs text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                Update Ticket Status & Equipment Lifecycle
               </h4>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                   Transition Status
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400 transition"
                 >
-                  <option value="Open">Open</option>
-                  <option value="Under Review">Under Review</option>
-                  <option value="In Repair">In Repair (Sets equipment to Under Repair)</option>
-                  <option value="Resolved">Resolved (Closes fault ticket)</option>
+                  <option value="Open" className="bg-slate-900 text-white">Open</option>
+                  <option value="Under Review" className="bg-slate-900 text-white">Under Review</option>
+                  <option value="In Repair" className="bg-slate-900 text-white">In Repair (Sets equipment to Under Repair)</option>
+                  <option value="Resolved" className="bg-slate-900 text-white">Resolved (Closes fault ticket)</option>
                 </select>
               </div>
 
               {newStatus === 'Resolved' && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                       Resolution Notes / Work Done
                     </label>
                     <textarea
                       rows="2"
                       required
-                      placeholder="e.g. Replaced blown fuse on channel 1, calibrated baseline, tested with 1kHz square wave."
+                      placeholder="e.g. Replaced damaged fuse on channel 1, tested with 1kHz calibration wave, equipment ready."
                       value={resolutionNotes}
                       onChange={(e) => setResolutionNotes(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                     ></textarea>
                   </div>
 
-                  <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer p-3 rounded-xl bg-white/[0.03] border border-white/10">
                     <input
                       type="checkbox"
                       checked={restoreOperational}
                       onChange={(e) => setRestoreOperational(e.target.checked)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-slate-700 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
                     />
                     <span>
-                      Restore equipment operational status to <strong>'Ready to Use'</strong> (if no other faults exist)
+                      Restore equipment operational status to <strong className="text-emerald-400">'Ready to Use'</strong> (if no other open faults exist)
                     </span>
                   </label>
                 </>
               )}
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="pt-3 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white"
                 >
                   Close
                 </button>
                 <button
                   type="submit"
                   disabled={updating}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition disabled:opacity-50"
                 >
                   {updating ? 'Saving...' : 'Update Ticket'}
                 </button>
