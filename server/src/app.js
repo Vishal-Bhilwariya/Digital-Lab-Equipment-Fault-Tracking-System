@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
 
 // Import Routes
 import authRoutes from './routes/authRoutes.js';
@@ -37,26 +38,46 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// ── Health check endpoint (always available, even without DB) ──────────────────
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'online',
+  const dbState = mongoose.connection.readyState;
+  // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  const dbStatus = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState] || 'unknown';
+  res.status(dbState === 1 ? 200 : 503).json({
+    status: dbState === 1 ? 'online' : 'degraded',
+    database: dbStatus,
     timestamp: new Date().toISOString(),
-    service: 'Lab Equipment Calibration & Fault Tracking System API'
+    service: 'Lab Equipment Calibration & Fault Tracking System API',
+    ...(dbState !== 1 && {
+      hint: 'Database not connected. Please whitelist your IP in MongoDB Atlas → Security → Network Access.'
+    })
   });
 });
 
-// API Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/labs', labRoutes);
-app.use('/api/v1/equipment', equipmentRoutes);
-app.use('/api/v1/tickets', ticketRoutes);
-app.use('/api/v1/calibrations', calibrationRoutes);
-app.use('/api/v1/reports', reportRoutes);
+// ── DB Readiness Guard — return 503 instead of a cryptic crash ─────────────────
+const requireDB = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database not connected. The server is running but cannot reach MongoDB Atlas.',
+      hint: 'Go to https://cloud.mongodb.com → Security → Network Access → Add IP Address → Allow Access From Anywhere (0.0.0.0/0). Then restart the server.'
+    });
+  }
+  next();
+};
+
+// API Routes (all protected by DB readiness guard)
+app.use('/api/v1/auth', requireDB, authRoutes);
+app.use('/api/v1/users', requireDB, userRoutes);
+app.use('/api/v1/labs', requireDB, labRoutes);
+app.use('/api/v1/equipment', requireDB, equipmentRoutes);
+app.use('/api/v1/tickets', requireDB, ticketRoutes);
+app.use('/api/v1/calibrations', requireDB, calibrationRoutes);
+app.use('/api/v1/reports', requireDB, reportRoutes);
 
 // Error Handling Middleware
 app.use(notFound);
 app.use(errorHandler);
 
 export default app;
+
