@@ -79,14 +79,25 @@ const seedDatabase = async () => {
 
     // ── 3. Create System Administrator ─────────────────────────────────────
     const admin = await User.create({
-      name: 'System Administrator',
-      email: 'admin@labtrack.edu',
+      name: 'Mohit Kumar Solanki',
+      email: 'mohitkumarsolanki25112005@gmail.com',
       mobile: '9800000001',
       passwordHash: adminHash,
       role: ROLES.ADMIN,
       isActive: true
     });
-    console.log(`[Seeder] Created Admin: ${admin.email}`);
+    console.log(`[Seeder] Created Primary Admin: ${admin.email}`);
+
+    // Also keep secondary admin for backward compatibility
+    await User.create({
+      name: 'System Administrator',
+      email: 'admin@labtrack.edu',
+      mobile: '9800000000',
+      passwordHash: adminHash,
+      role: ROLES.ADMIN,
+      isActive: true
+    });
+    console.log('[Seeder] Created Secondary Admin: admin@labtrack.edu');
 
     // ── 4. Create Lab Assistants ────────────────────────────────────────────
     const assistant1 = await User.create({

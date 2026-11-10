@@ -12,7 +12,8 @@ import {
   Plus,
   Layers3,
   Building2,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 import { OperationalStatusBadge } from '../../utils/statusBadges';
 
@@ -20,19 +21,36 @@ const AssistantDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchStats = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
+      const res = await api.get('/reports/stats');
+      setStats(res.data.data);
+    } catch (err) {
+      console.error('Failed to load assistant stats:', err);
+    } finally {
+      setLoading(false);
+      if (isManual) setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await api.get('/reports/stats');
-        setStats(res.data.data);
-      } catch (err) {
-        console.error('Failed to load assistant stats:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStats();
+
+    // Live auto-refresh stats every 5 seconds (Requirement: Turant data fetch)
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 5000);
+
+    const onFocus = () => fetchStats();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   return (
@@ -46,7 +64,10 @@ const AssistantDashboard = () => {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-[11px] font-bold tracking-wider uppercase mb-3">
             <Building2 className="w-3.5 h-3.5 text-cyan-400" />
             LAB ISOLATION: {user?.assignedLab?.labName || 'ASSIGNED LAB'} ({user?.assignedLab?.labId || 'LAB'})
-            <Sparkles className="w-3 h-3 text-cyan-400" />
+            <span className="flex h-2 w-2 relative ml-1">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Lab Operations Console
@@ -57,6 +78,17 @@ const AssistantDashboard = () => {
         </div>
 
         <div className="relative z-10 flex flex-wrap items-center gap-3 shrink-0 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => fetchStats(true)}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition cursor-pointer"
+            title="Fetch live metrics immediately"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Updating...' : 'Sync Live'}
+          </button>
+
           <Link
             to="/assistant/equipment"
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5"

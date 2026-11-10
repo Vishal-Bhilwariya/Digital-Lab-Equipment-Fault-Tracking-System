@@ -105,6 +105,14 @@ const ManageLabs = () => {
     return matchesSearch;
   });
 
+  // Archive lab sabse niche aaye (Active labs on top, Archived labs strictly at the bottom)
+  const sortedLabs = [...filteredLabs].sort((a, b) => {
+    if (a.isActive === b.isActive) {
+      return a.labName.localeCompare(b.labName);
+    }
+    return a.isActive ? -1 : 1;
+  });
+
   const activeCount = labs.filter((l) => l.isActive).length;
   const archivedCount = labs.filter((l) => !l.isActive).length;
 
@@ -215,8 +223,8 @@ const ManageLabs = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.06]">
-              {filteredLabs.length > 0 ? (
-                filteredLabs.map((lab) => (
+              {sortedLabs.length > 0 ? (
+                sortedLabs.map((lab) => (
                   <tr key={lab._id} className="hover:bg-white/[0.03] transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-cyan-400 text-sm">{lab.labId}</td>
                     <td className="px-6 py-4 font-bold text-white text-sm">{lab.labName}</td>

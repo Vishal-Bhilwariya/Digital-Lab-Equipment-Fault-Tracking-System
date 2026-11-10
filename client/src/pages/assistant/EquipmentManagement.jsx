@@ -18,7 +18,12 @@ import {
   LayoutDashboard,
   Calendar,
   Building2,
-  ShieldCheck
+  ShieldCheck,
+  Loader2,
+  Download,
+  Copy,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { OperationalStatusBadge, CalibrationStatusBadge } from '../../utils/statusBadges';
 
@@ -33,9 +38,11 @@ const EquipmentManagement = () => {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Active QR state
+  // Active QR state (pre-loaded from item or fetched)
   const [qrData, setQrData] = useState(null);
   const [qrLoading, setQrLoading] = useState(false);
+  const [expandedQrId, setExpandedQrId] = useState(null); // Inline QR view in table row
+  const [copiedId, setCopiedId] = useState(null);
 
   // Active Edit state
   const [selectedItem, setSelectedItem] = useState(null);
@@ -70,19 +77,60 @@ const EquipmentManagement = () => {
     fetchEquipment();
   }, [search]);
 
-  // Open QR Modal
+  // Open QR directly from the row on the SAME page (zero wait time)
+  const handleSelectQrItem = (item) => {
+    if (item.qrCodeDataUrl) {
+      setQrData({
+        publicId: item.publicId,
+        equipmentName: item.name,
+        serialNumber: item.serialNumber,
+        labName: item.labId?.labName || user?.assignedLab?.labName || 'Laboratory',
+        labBlock: item.labId?.labBlock || user?.assignedLab?.labBlock || '',
+        qrCodeDataUrl: item.qrCodeDataUrl,
+        targetUrl: item.targetUrl || `${window.location.origin}/equipment/${item.publicId}`
+      });
+      setShowQrModal(true);
+    } else {
+      handleOpenQr(item._id);
+    }
+  };
+
+  // Fallback: Fetch QR from backend if not pre-attached
   const handleOpenQr = async (id) => {
+    setQrData(null);
     setQrLoading(true);
     setShowQrModal(true);
     try {
       const res = await api.get(`/equipment/${id}/qr`);
       setQrData(res.data.data);
     } catch (err) {
-      alert('Failed to generate QR code');
+      alert(err.response?.data?.message || 'Failed to generate QR code');
       setShowQrModal(false);
     } finally {
       setQrLoading(false);
     }
+  };
+
+  // Toggle inline QR card right on the same page below the row
+  const toggleInlineQr = (id) => {
+    setExpandedQrId((prev) => (prev === id ? null : id));
+  };
+
+  // Download QR Code as PNG file
+  const handleDownloadQr = (dataUrl, publicId, eqName) => {
+    if (!dataUrl) return;
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `QR-${publicId}-${eqName.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const copyUrl = (url, id) => {
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2500);
   };
 
   // Open Edit Modal
@@ -169,10 +217,10 @@ const EquipmentManagement = () => {
             LABORATORY INVENTORY
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Equipment Inventory
+            Equipment Inventory & QR Labels
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Registered for <span className="text-white font-semibold">{user?.assignedLab?.labName || 'Your Assigned Laboratory'}</span>. Sorted by lifetime damage count.
+            Registered for <span className="text-white font-semibold">{user?.assignedLab?.labName || 'Your Assigned Laboratory'}</span>. QR identification labels are rendered directly on this page for physical printing.
           </p>
         </div>
 
@@ -226,6 +274,7 @@ const EquipmentManagement = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-white/[0.03] text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider text-[11px]">
               <tr>
+                <th className="px-5 py-4 text-center">QR Code</th>
                 <th className="px-6 py-4">Equipment Details</th>
                 <th className="px-6 py-4">Bench Location</th>
                 <th className="px-6 py-4">Added On</th>
@@ -236,76 +285,214 @@ const EquipmentManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.06]">
-              {equipment.length > 0 ? (
-                equipment.map((eq) => (
-                  <tr key={eq._id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-white block text-sm">{eq.name}</span>
-                      <span className="font-mono text-[11px] text-slate-400">
-                        SN: {eq.serialNumber} {eq.model ? `• ${eq.model}` : ''}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-300 font-medium">{eq.location}</td>
-                    <td className="px-6 py-4 font-mono text-slate-400 whitespace-nowrap">
-                      {eq.additionDate || eq.installationDate
-                        ? new Date(eq.additionDate || eq.installationDate).toLocaleDateString()
-                        : '—'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <OperationalStatusBadge status={eq.operationalStatus} />
-                    </td>
-                    <td className="px-6 py-4">
-                      {eq.nextCalibrationDate ? (
-                        <CalibrationStatusBadge
-                          status={eq.calibrationHealth?.status}
-                          daysRemaining={eq.calibrationHealth?.daysRemaining}
-                        />
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-white/10">
-                          Non-Calibrated
-                        </span>
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-14 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                      <span>Loading laboratory equipment...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : equipment.length > 0 ? (
+                equipment.map((eq) => {
+                  const isExpanded = expandedQrId === eq._id;
+                  const targetUrl = eq.targetUrl || `${window.location.origin}/equipment/${eq.publicId}`;
+                  return (
+                    <React.Fragment key={eq._id}>
+                      <tr className="hover:bg-white/[0.03] transition-colors">
+                        {/* Direct QR Code Thumbnail on Same Page */}
+                        <td className="px-5 py-4 text-center">
+                          <div className="inline-flex flex-col items-center gap-1.5">
+                            {eq.qrCodeDataUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => handleSelectQrItem(eq)}
+                                title="Click to view full printable QR"
+                                className="p-1 bg-white rounded-xl shadow-md hover:scale-105 transition-all border border-white/20 group cursor-pointer"
+                              >
+                                <img
+                                  src={eq.qrCodeDataUrl}
+                                  alt="QR"
+                                  className="w-12 h-12 object-contain rounded"
+                                />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenQr(eq._id)}
+                                className="p-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/30 transition cursor-pointer"
+                                title="Generate QR Code"
+                              >
+                                <QrCode className="w-5 h-5" />
+                              </button>
+                            )}
+
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-cyan-300 font-mono font-bold tracking-tight">
+                                {eq.publicId}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleInlineQr(eq._id)}
+                                title={isExpanded ? 'Hide inline preview' : 'Show inline preview'}
+                                className="text-slate-400 hover:text-cyan-300 transition"
+                              >
+                                {isExpanded ? (
+                                  <ChevronUp className="w-3 h-3 text-cyan-400" />
+                                ) : (
+                                  <ChevronDown className="w-3 h-3" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="font-bold text-white block text-sm">{eq.name}</span>
+                          <span className="font-mono text-[11px] text-slate-400">
+                            SN: {eq.serialNumber} {eq.model ? `• ${eq.model}` : ''}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4 text-slate-300 font-medium">{eq.location}</td>
+
+                        <td className="px-6 py-4 font-mono text-slate-400 whitespace-nowrap">
+                          {eq.additionDate || eq.installationDate
+                            ? new Date(eq.additionDate || eq.installationDate).toLocaleDateString()
+                            : '—'}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <OperationalStatusBadge status={eq.operationalStatus} />
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {eq.nextCalibrationDate ? (
+                            <CalibrationStatusBadge
+                              status={eq.calibrationHealth?.status}
+                              daysRemaining={eq.calibrationHealth?.daysRemaining}
+                            />
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-white/10">
+                              Non-Calibrated
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-lg text-xs font-bold font-mono border ${
+                              eq.damageCount > 0
+                                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                                : 'bg-slate-800 border-white/10 text-slate-300'
+                            }`}
+                          >
+                            {eq.damageCount}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectQrItem(eq)}
+                            title="View & Print QR Code"
+                            className="p-2 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/30 transition cursor-pointer"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(eq)}
+                            title="Edit Status / Location"
+                            className="p-2 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-400/30 transition cursor-pointer"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleArchive(eq._id, eq.name)}
+                            title="Archive Equipment"
+                            className="p-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition cursor-pointer"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Same-Page Inline QR Preview Drawer */}
+                      {isExpanded && (
+                        <tr className="bg-[#081226]/90 border-t border-b border-cyan-400/20">
+                          <td colSpan="8" className="p-6">
+                            <div className="flex flex-col md:flex-row items-center gap-6 bg-[#0c1833] border border-cyan-400/20 rounded-2xl p-5 shadow-inner">
+                              <div className="p-3 bg-white rounded-2xl shadow-xl shrink-0">
+                                <img
+                                  src={eq.qrCodeDataUrl}
+                                  alt="Equipment QR Code"
+                                  className="w-36 h-36 mx-auto object-contain"
+                                />
+                              </div>
+
+                              <div className="flex-1 space-y-2 text-center md:text-left">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-[10px] font-bold uppercase tracking-wider">
+                                  <QrCode className="w-3 h-3" />
+                                  Active Physical Label QR
+                                </div>
+                                <h4 className="text-base font-bold text-white">{eq.name}</h4>
+                                <p className="text-xs text-slate-300 font-mono">
+                                  SN: <span className="text-white font-bold">{eq.serialNumber}</span> • Bench: {eq.location}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                  Public Scan URL:
+                                  <a
+                                    href={targetUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="ml-1 text-cyan-300 hover:underline font-mono text-[11px] inline-flex items-center gap-1"
+                                  >
+                                    {targetUrl}
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </p>
+                              </div>
+
+                              <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectQrItem(eq)}
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                  Print QR Label
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadQr(eq.qrCodeDataUrl, eq.publicId, eq.name)}
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/15 text-white border border-white/15 rounded-xl text-xs font-semibold cursor-pointer transition"
+                                >
+                                  <Download className="w-3.5 h-3.5 text-cyan-400" />
+                                  Download PNG
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => copyUrl(targetUrl, eq._id)}
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl text-xs font-semibold cursor-pointer transition"
+                                >
+                                  <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                  {copiedId === eq._id ? 'Copied URL!' : 'Copy Scan URL'}
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-lg text-xs font-bold font-mono border ${
-                          eq.damageCount > 0
-                            ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
-                            : 'bg-slate-800 border-white/10 text-slate-300'
-                        }`}
-                      >
-                        {eq.damageCount}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button
-                        onClick={() => handleOpenQr(eq._id)}
-                        title="View / Print QR Code"
-                        className="p-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-400/20 transition cursor-pointer"
-                      >
-                        <QrCode className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEdit(eq)}
-                        title="Edit Status / Location"
-                        className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-400/20 transition cursor-pointer"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleArchive(eq._id, eq.name)}
-                        title="Archive Equipment"
-                        className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition cursor-pointer"
-                      >
-                        <Archive className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                    </React.Fragment>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-6 py-10 text-center text-slate-400">
-                    No equipment found in inventory.
+                  <td colSpan="8" className="px-6 py-10 text-center text-slate-400">
+                    No equipment found in inventory. Click "Add Equipment" to register instruments.
                   </td>
                 </tr>
               )}
@@ -320,152 +507,151 @@ const EquipmentManagement = () => {
           <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl relative text-white max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowAddModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-3.5 mb-5">
-              <div className="w-11 h-11 rounded-2xl bg-cyan-500/15 border border-cyan-400/25 text-cyan-400 flex items-center justify-center">
-                <Cpu className="w-6 h-6" />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-400/25 text-cyan-400 flex items-center justify-center">
+                <Plus className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-white">Register Lab Equipment</h3>
-                <p className="text-xs text-slate-400">Registers into your assigned laboratory automatically</p>
+                <h3 className="font-bold text-lg text-white">Register New Equipment</h3>
+                <p className="text-xs text-slate-400">
+                  Assigning instrument to your laboratory
+                </p>
               </div>
-            </div>
-
-            {/* Auto-detected Laboratory Display (Requirement 4.A.2 & 4.A.3) */}
-            <div className="mb-4 p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-400/25 flex items-center justify-between text-xs">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-cyan-400 block tracking-wider">
-                  Assigned Laboratory (Auto-Enforced)
-                </span>
-                <span className="font-bold text-white text-sm">
-                  {user?.assignedLab?.labName || 'Assigned Laboratory'}
-                </span>
-              </div>
-              <span className="px-2.5 py-1 rounded-lg bg-black/40 text-cyan-300 font-mono text-[11px] border border-cyan-400/20">
-                {user?.assignedLab?.labId || 'LAB'}
-              </span>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             <form onSubmit={handleCreateEquipment} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Equipment Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Digital Storage Oscilloscope"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
-                  />
+              {/* Auto-detected Assigned Lab Badge */}
+              <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-cyan-400" />
+                  <div>
+                    <span className="block text-[10px] text-cyan-400 uppercase font-bold tracking-wider">
+                      Assigned Laboratory (Auto-detected)
+                    </span>
+                    <span className="font-bold text-white text-xs">
+                      {user?.assignedLab?.labName || 'Your Assigned Lab'}
+                    </span>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Serial Number
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. TEK-2024-001"
-                    value={serialNumber}
-                    onChange={(e) => setSerialNumber(e.target.value)}
-                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
-                  />
-                </div>
+                <span className="text-[10px] font-mono bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-400/30">
+                  Strictly Enforced
+                </span>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Equipment Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Digital Storage Oscilloscope"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Serial Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. DSO-1004"
+                    value={serialNumber}
+                    onChange={(e) => setSerialNumber(e.target.value)}
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono transition"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                     Model / Specification
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Tektronix TBS1102B"
+                    placeholder="e.g. Tektronix TBS1052B"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Bench / Physical Location
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Bench 04, Room 102"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
               </div>
 
-              {/* Equipment Addition Date (Requirement 4.A.1) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Equipment Addition Date
-                </label>
-                <div className="relative">
-                  <Calendar className="w-4 h-4 text-cyan-400 absolute left-3.5 top-2.5" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Bench Location *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Workbench 4, Bay B"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
+
+                {/* Equipment Addition Date (Requirement 4.A) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Equipment Addition Date *
+                  </label>
                   <input
                     type="date"
                     required
                     value={additionDate}
                     onChange={(e) => setAdditionDate(e.target.value)}
-                    className="w-full bg-[#081124] border border-white/15 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-400 transition"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
               </div>
 
-              {/* Optional Calibration Interval (Requirement 4.A.5 & 4.A.6) */}
-              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
+              {/* Optional Calibration Interval (Requirement 4.A) */}
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="block text-xs font-bold text-white">Periodic Calibration Required?</span>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">
+                      Uncheck if instrument is damaged, passive, or does not require periodic calibration schedules.
+                    </span>
+                  </div>
                   <input
                     type="checkbox"
                     checked={requiresCalibration}
                     onChange={(e) => setRequiresCalibration(e.target.checked)}
-                    className="w-4 h-4 rounded border-white/20 text-cyan-500 focus:ring-0 bg-[#081124] cursor-pointer"
+                    className="w-4 h-4 accent-cyan-500 rounded cursor-pointer"
                   />
-                  <span className="text-xs font-semibold text-slate-200">
-                    Requires Periodic Calibration Verification
-                  </span>
-                </label>
+                </div>
 
                 {requiresCalibration && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                       Calibration Interval (Days)
                     </label>
                     <input
                       type="number"
-                      min={1}
-                      max={3650}
-                      required={requiresCalibration}
+                      min="1"
                       value={calibrationIntervalDays}
                       onChange={(e) => setCalibrationIntervalDays(e.target.value)}
                       placeholder="e.g. 180"
-                      className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                      className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-400 transition"
                     />
-                    <span className="text-[10px] text-slate-400 mt-1 block">
-                      Default is 180 days (~6 months). Leave unchecked for non-calibrated furniture/tools.
-                    </span>
                   </div>
                 )}
               </div>
@@ -481,9 +667,10 @@ const EquipmentManagement = () => {
                 <button
                   type="submit"
                   disabled={submitLoading}
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition disabled:opacity-50"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  {submitLoading ? 'Registering...' : 'Register Equipment'}
+                  {submitLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Register Instrument
                 </button>
               </div>
             </form>
@@ -493,11 +680,11 @@ const EquipmentManagement = () => {
 
       {/* Edit Equipment Modal */}
       {showEditModal && selectedItem && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-md p-6 sm:p-7 shadow-2xl relative text-white">
             <button
               onClick={() => setShowEditModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -544,7 +731,7 @@ const EquipmentManagement = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition cursor-pointer"
                 >
                   Save Changes
                 </button>
@@ -554,36 +741,62 @@ const EquipmentManagement = () => {
         </div>
       )}
 
-      {/* QR Code Printable Modal */}
-      {showQrModal && qrData && (
+      {/* QR Code Printable Modal on Same Page */}
+      {showQrModal && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl relative text-white">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-sm p-6 sm:p-7 text-center shadow-2xl relative text-white">
             <button
-              onClick={() => setShowQrModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white"
+              onClick={() => { setShowQrModal(false); setQrData(null); }}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="font-bold text-base text-white">{qrData.equipmentName}</h3>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">SN: {qrData.serialNumber}</p>
-            <p className="text-xs text-cyan-400 mt-0.5">{qrData.labName} • {qrData.labBlock}</p>
+            {qrLoading || !qrData ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+                <p className="text-xs text-slate-400 font-mono">Generating high-contrast QR code...</p>
+              </div>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-[10px] font-bold uppercase tracking-wider mb-2">
+                  <QrCode className="w-3.5 h-3.5 text-cyan-400" />
+                  Physical Instrument QR Label
+                </div>
 
-            <div className="my-5 p-4 bg-white rounded-2xl inline-block shadow-xl">
-              <img src={qrData.qrCodeDataUrl} alt="Equipment QR Code" className="w-48 h-48 mx-auto" />
-            </div>
+                <h3 className="font-bold text-base text-white">{qrData.equipmentName}</h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">SN: {qrData.serialNumber}</p>
+                <p className="text-xs text-cyan-400 mt-0.5">{qrData.labName} • {qrData.labBlock}</p>
 
-            <p className="text-[11px] text-slate-400 font-mono break-all mb-4">
-              Public QR ID: <span className="text-cyan-300 font-bold">{qrData.publicId}</span>
-            </p>
+                <div className="my-5 p-4 bg-white rounded-2xl inline-block shadow-2xl border border-white/20">
+                  <img src={qrData.qrCodeDataUrl} alt="Equipment QR Code" className="w-48 h-48 mx-auto object-contain" />
+                </div>
 
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-xs font-bold shadow-lg"
-            >
-              <Printer className="w-4 h-4" />
-              Print QR Label
-            </button>
+                <p className="text-[11px] text-slate-400 font-mono break-all mb-4">
+                  Public QR ID: <span className="text-cyan-300 font-bold">{qrData.publicId}</span>
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg cursor-pointer transition"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print Label
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadQr(qrData.qrCodeDataUrl, qrData.publicId, qrData.equipmentName)}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white border border-white/15 rounded-xl text-xs font-semibold cursor-pointer transition"
+                  >
+                    <Download className="w-4 h-4 text-cyan-400" />
+                    Download PNG
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

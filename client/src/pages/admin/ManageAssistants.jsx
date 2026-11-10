@@ -111,6 +111,14 @@ const ManageAssistants = () => {
     }
   };
 
+  // Deactivated assistants sabse niche aaye (Active assistants first, Deactivated at the bottom)
+  const sortedAssistants = [...assistants].sort((a, b) => {
+    if (a.isActive === b.isActive) {
+      return a.name.localeCompare(b.name);
+    }
+    return a.isActive ? -1 : 1;
+  });
+
   return (
     <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full space-y-7">
       
@@ -226,12 +234,12 @@ const ManageAssistants = () => {
                     </div>
                   </td>
                 </tr>
-              ) : assistants.length > 0 ? (
-                assistants.map((ast) => {
+              ) : sortedAssistants.length > 0 ? (
+                sortedAssistants.map((ast) => {
                   const astId = ast._id || ast.id;
                   const isToggling = togglingId === astId;
                   return (
-                    <tr key={astId} className="hover:bg-white/[0.03] transition-colors">
+                    <tr key={astId} className={`hover:bg-white/[0.03] transition-colors ${!ast.isActive ? 'opacity-70 bg-black/20' : ''}`}>
                       <td className="px-6 py-4 font-mono font-bold text-cyan-400 text-xs">
                         {ast.assistantId || 'AST-LEGACY'}
                       </td>

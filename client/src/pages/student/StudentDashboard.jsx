@@ -31,13 +31,14 @@ const StudentDashboard = () => {
     expired: 0
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
-  const fetchStudentTickets = async () => {
+  const fetchStudentTickets = async (isManual = false) => {
     try {
-      setLoading(true);
+      if (isManual) setRefreshing(true);
       const res = await api.get('/tickets/my-tickets');
       setTickets(res.data.data || []);
       if (res.data.stats) {
@@ -47,11 +48,22 @@ const StudentDashboard = () => {
       console.error('Failed to load student tickets:', err);
     } finally {
       setLoading(false);
+      if (isManual) setRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchStudentTickets();
+
+    // Live auto-refresh every 5 seconds (Instant data fetch)
+    const interval = setInterval(fetchStudentTickets, 5000);
+    const onFocus = () => fetchStudentTickets();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   // Filter tickets by search and status
@@ -98,10 +110,11 @@ const StudentDashboard = () => {
             Go to Main Dashboard
           </Link>
           <button
-            onClick={fetchStudentTickets}
+            onClick={() => fetchStudentTickets(true)}
+            disabled={refreshing}
             className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-violet-500/20 transition cursor-pointer"
           >
-            Refresh Tickets
+            {refreshing ? 'Syncing...' : 'Refresh Live'}
           </button>
         </div>
       </div>

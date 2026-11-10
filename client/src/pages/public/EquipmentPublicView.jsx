@@ -11,7 +11,9 @@ import {
   Wrench,
   ArrowRight,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  QrCode,
+  Printer
 } from 'lucide-react';
 import { OperationalStatusBadge, CalibrationStatusBadge } from '../../utils/statusBadges';
 
@@ -160,9 +162,34 @@ const EquipmentPublicView = () => {
           <div className="text-xs text-slate-400 flex items-center justify-between">
             <span>Next Calibration Due:</span>
             <span className="font-mono font-bold text-white">
-              {new Date(equipment.nextCalibrationDate).toLocaleDateString()}
+              {equipment.nextCalibrationDate ? new Date(equipment.nextCalibrationDate).toLocaleDateString() : 'N/A (Exempt)'}
             </span>
           </div>
+
+          {/* QR Code Identification Card */}
+          {equipment.qrCodeDataUrl && (
+            <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-white/[0.04] border border-white/10">
+              <div className="p-2 bg-white rounded-xl shrink-0 shadow-md">
+                <img src={equipment.qrCodeDataUrl} alt="Equipment QR Code" className="w-16 h-16" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <QrCode className="w-3.5 h-3.5 text-cyan-400" />
+                  Verified Equipment QR Code
+                </p>
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">
+                  ID: <span className="text-cyan-300 font-bold">{equipment.publicId}</span>
+                </p>
+                <button
+                  onClick={() => window.print()}
+                  className="mt-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 cursor-pointer transition"
+                >
+                  <Printer className="w-3 h-3" />
+                  Print / Save QR Label
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Action: Raise Ticket Button */}
           <div className="pt-1">
@@ -179,10 +206,10 @@ const EquipmentPublicView = () => {
         {/* Track Ticket Link */}
         <div className="text-center mt-6">
           <Link
-            to="/track-ticket"
+            to="/login?role=Student"
             className="text-xs text-slate-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1.5 transition"
           >
-            Already submitted a fault? Track ticket status <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+            Already submitted a fault? Sign in as Student <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
           </Link>
         </div>
       </div>

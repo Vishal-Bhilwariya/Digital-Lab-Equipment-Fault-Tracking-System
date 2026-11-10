@@ -143,10 +143,25 @@ export const getLabEquipment = async (req, res, next) => {
       .populate('labId', 'labId labName labBlock')
       .sort(sortCriteria);
 
+    // Pre-generate and attach instant Base64 QR code and target URL for every item
+    const enrichedEquipment = await Promise.all(
+      equipment.map(async (eq) => {
+        try {
+          const qr = await generateEquipmentQR(eq.publicId);
+          const obj = eq.toObject({ virtuals: true });
+          obj.qrCodeDataUrl = qr.qrDataUrl;
+          obj.targetUrl = qr.targetUrl;
+          return obj;
+        } catch (e) {
+          return eq.toObject({ virtuals: true });
+        }
+      })
+    );
+
     res.status(200).json({
       success: true,
-      count: equipment.length,
-      data: equipment
+      count: enrichedEquipment.length,
+      data: enrichedEquipment
     });
   } catch (error) {
     next(error);
@@ -172,6 +187,8 @@ export const getEquipmentByPublicId = async (req, res, next) => {
       });
     }
 
+    const qrResult = await generateEquipmentQR(equipment.publicId);
+
     // Format safe public view (no internal sensitive IDs)
     res.status(200).json({
       success: true,
@@ -188,7 +205,9 @@ export const getEquipmentByPublicId = async (req, res, next) => {
         operationalStatus: equipment.operationalStatus,
         lastCalibrationDate: equipment.lastCalibrationDate,
         nextCalibrationDate: equipment.nextCalibrationDate,
-        calibrationHealth: equipment.calibrationHealth
+        calibrationHealth: equipment.calibrationHealth,
+        qrCodeDataUrl: qrResult.qrDataUrl,
+        targetUrl: qrResult.targetUrl
       }
     });
   } catch (error) {

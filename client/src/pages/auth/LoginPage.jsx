@@ -72,13 +72,6 @@ const LoginPage = () => {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  const handleDemoLogin = (demoIdentifier, demoPass, isStudentTab = false) => {
-    setActiveTab(isStudentTab ? 'student' : 'staff');
-    setIdentifier(demoIdentifier);
-    setPassword(demoPass);
-    setError('');
-  };
-
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -382,39 +375,6 @@ const LoginPage = () => {
               {loading ? 'Authenticating...' : activeTab === 'student' ? 'Sign In as Student' : 'Sign In as Staff'}
             </button>
           </form>
-
-          {/* Quick Demo Credentials */}
-          <div className="mt-7 pt-5 border-t border-white/[0.08]">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block text-center mb-3">
-              One-Click Demo Access
-            </span>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('admin@labtrack.edu', 'Admin@123', false)}
-                className="flex flex-col items-center justify-center p-2 bg-[#080F20] hover:bg-[#111c38] border border-white/[0.08] rounded-xl text-[11px] font-medium text-slate-300 hover:text-white transition cursor-pointer"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 mb-0.5" />
-                Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('rahul.sharma@labtrack.edu', 'Assistant@123', false)}
-                className="flex flex-col items-center justify-center p-2 bg-[#080F20] hover:bg-[#111c38] border border-white/[0.08] rounded-xl text-[11px] font-medium text-slate-300 hover:text-white transition cursor-pointer"
-              >
-                <Wrench className="w-3.5 h-3.5 text-emerald-400 mb-0.5" />
-                Assistant
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('2200290100018', 'Student@123', true)}
-                className="flex flex-col items-center justify-center p-2 bg-[#080F20] hover:bg-[#111c38] border border-white/[0.08] rounded-xl text-[11px] font-medium text-slate-300 hover:text-white transition cursor-pointer"
-              >
-                <GraduationCap className="w-3.5 h-3.5 text-violet-400 mb-0.5" />
-                Student
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

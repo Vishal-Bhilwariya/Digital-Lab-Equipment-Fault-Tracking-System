@@ -175,7 +175,21 @@ export const getLabTickets = async (req, res, next) => {
     }
 
     if (req.query.status) {
-      query.ticketStatus = req.query.status;
+      const statusParam = req.query.status.trim().toLowerCase();
+      if (statusParam === 'active') {
+        // Active faults: Open, Under Review, or In Repair
+        query.ticketStatus = {
+          $in: [TICKET_STATUS.OPEN, TICKET_STATUS.UNDER_REVIEW, TICKET_STATUS.IN_REPAIR]
+        };
+      } else if (statusParam === 'all') {
+        // All history: do not filter by ticketStatus
+      } else if (statusParam === 'resolved') {
+        query.ticketStatus = TICKET_STATUS.RESOLVED;
+      } else if (statusParam === 'expired') {
+        query.ticketStatus = TICKET_STATUS.EXPIRED;
+      } else {
+        query.ticketStatus = req.query.status;
+      }
     }
 
     const tickets = await Ticket.find(query)
