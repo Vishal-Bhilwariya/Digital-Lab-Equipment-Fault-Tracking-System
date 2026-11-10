@@ -7,25 +7,38 @@ import {
   trackTicket
 } from '../controllers/ticketController.js';
 import { protect, authorizeRole } from '../middleware/auth.js';
+import {
+  validateCreateTicket,
+  validateUpdateTicketStatus,
+  validateMongoId
+} from '../middleware/validators.js';
 import { ROLES } from '../utils/constants.js';
 import { upload } from '../services/uploadService.js';
 
 const router = express.Router();
 
-// Public endpoints for students
-router.post('/public', upload.single('photo'), createPublicTicket);
+// ── Public Routes (no auth required) ─────────────────────────────────────────
+// Student fault submission via QR scan
+router.post('/public', upload.single('photo'), validateCreateTicket, createPublicTicket);
+// Student ticket status tracking
 router.get('/track', trackTicket);
 
-// Protected endpoints for Lab Assistants and Admins
+// ── Authenticated Routes ──────────────────────────────────────────────────────
 router.use(protect);
 
 router.route('/')
   .get(authorizeRole(ROLES.ASSISTANT, ROLES.ADMIN), getLabTickets);
 
 router.route('/:id')
-  .get(authorizeRole(ROLES.ASSISTANT, ROLES.ADMIN), getTicketById);
+  .get(authorizeRole(ROLES.ASSISTANT, ROLES.ADMIN), validateMongoId, getTicketById);
 
-router.route('/:id/status')
-  .patch(authorizeRole(ROLES.ASSISTANT), updateTicketStatus);
+// Both Admin and Assistant can update ticket status
+router.patch(
+  '/:id/status',
+  authorizeRole(ROLES.ASSISTANT, ROLES.ADMIN),
+  validateMongoId,
+  validateUpdateTicketStatus,
+  updateTicketStatus
+);
 
 export default router;

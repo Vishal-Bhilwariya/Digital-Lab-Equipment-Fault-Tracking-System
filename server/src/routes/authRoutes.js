@@ -1,11 +1,32 @@
 import express from 'express';
-import { login, getMe, setupPassword } from '../controllers/authController.js';
-import { protect } from '../middleware/auth.js';
+import {
+  login,
+  getMe,
+  setupPassword,
+  changePassword,
+  adminResetPassword,
+  resendInvite
+} from '../controllers/authController.js';
+import { protect, authorizeRole } from '../middleware/auth.js';
+import {
+  validateLogin,
+  validateSetupPassword,
+  validateChangePassword
+} from '../middleware/validators.js';
+import { ROLES } from '../utils/constants.js';
 
 const router = express.Router();
 
-router.post('/login', login);
-router.post('/setup-password', setupPassword);
+// ── Public Routes ─────────────────────────────────────────────────────────────
+router.post('/login', validateLogin, login);
+router.post('/setup-password', validateSetupPassword, setupPassword);
+
+// ── Authenticated Routes ──────────────────────────────────────────────────────
 router.get('/me', protect, getMe);
+router.post('/change-password', protect, validateChangePassword, changePassword);
+
+// ── Admin-only Routes ─────────────────────────────────────────────────────────
+router.post('/admin/reset-password/:userId', protect, authorizeRole(ROLES.ADMIN), adminResetPassword);
+router.post('/resend-invite/:userId', protect, authorizeRole(ROLES.ADMIN), resendInvite);
 
 export default router;

@@ -34,10 +34,24 @@ const LoginPage = () => {
         navigate('/assistant');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.message || '';
+
+      if (status === 503 || serverMsg.toLowerCase().includes('database not connected')) {
+        setError(
+          '⚠️ Database is not reachable. The server admin must whitelist the server IP in MongoDB Atlas → Security → Network Access.'
+        );
+      } else if (status === 401) {
+        setError('Invalid email or password. Please try again.');
+      } else if (!err.response) {
+        setError('Cannot reach the server. Make sure the backend is running on port 5000.');
+      } else {
+        setError(serverMsg || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
+
   };
 
   return (
