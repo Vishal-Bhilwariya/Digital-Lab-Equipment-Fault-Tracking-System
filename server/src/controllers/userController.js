@@ -101,16 +101,7 @@ export const getAssistants = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: assistants.length,
-      data: assistants.map((a) => ({
-        id: a._id,
-        name: a.name,
-        email: a.email,
-        mobile: a.mobile,
-        role: a.role,
-        isActive: a.isActive,
-        assignedLab: a.assignedLabId,
-        createdAt: a.createdAt
-      }))
+      data: assistants
     });
   } catch (error) {
     next(error);
