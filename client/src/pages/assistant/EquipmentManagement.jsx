@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   Cpu,
   Plus,
@@ -12,11 +14,16 @@ import {
   X,
   Search,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  LayoutDashboard,
+  Calendar,
+  Building2,
+  ShieldCheck
 } from 'lucide-react';
 import { OperationalStatusBadge, CalibrationStatusBadge } from '../../utils/statusBadges';
 
 const EquipmentManagement = () => {
+  const { user } = useAuth();
   const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -35,11 +42,14 @@ const EquipmentManagement = () => {
   const [editStatus, setEditStatus] = useState('Ready to Use');
   const [editLocation, setEditLocation] = useState('');
 
-  // Add Form states
+  // Add Form states (Requirement 4.A)
+  const todayStr = new Date().toISOString().split('T')[0];
   const [name, setName] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [model, setModel] = useState('');
   const [location, setLocation] = useState('');
+  const [additionDate, setAdditionDate] = useState(todayStr);
+  const [requiresCalibration, setRequiresCalibration] = useState(true);
   const [calibrationIntervalDays, setCalibrationIntervalDays] = useState(180);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -48,7 +58,7 @@ const EquipmentManagement = () => {
   const fetchEquipment = async () => {
     try {
       const res = await api.get(`/equipment?search=${search}`);
-      setEquipment(res.data.data);
+      setEquipment(res.data.data || []);
     } catch (err) {
       console.error('Failed to load equipment:', err);
     } finally {
@@ -100,7 +110,7 @@ const EquipmentManagement = () => {
     }
   };
 
-  // Submit Add
+  // Submit Add Equipment (Requirement 4.A)
   const handleCreateEquipment = async (e) => {
     e.preventDefault();
     setError('');
@@ -112,7 +122,8 @@ const EquipmentManagement = () => {
         serialNumber,
         model,
         location,
-        calibrationIntervalDays: Number(calibrationIntervalDays)
+        additionDate,
+        calibrationIntervalDays: requiresCalibration ? Number(calibrationIntervalDays) : null
       });
 
       setShowAddModal(false);
@@ -120,6 +131,9 @@ const EquipmentManagement = () => {
       setSerialNumber('');
       setModel('');
       setLocation('');
+      setAdditionDate(todayStr);
+      setRequiresCalibration(true);
+      setCalibrationIntervalDays(180);
       setSuccessMsg(`Equipment registered with damageCount=0 and unique Public QR ID.`);
       fetchEquipment();
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -130,7 +144,7 @@ const EquipmentManagement = () => {
     }
   };
 
-  // Archive
+  // Archive Equipment
   const handleArchive = async (id, eqName) => {
     if (!window.confirm(`Are you sure you want to archive '${eqName}'? Fault history will be preserved.`)) return;
 
@@ -158,17 +172,28 @@ const EquipmentManagement = () => {
             Equipment Inventory
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Sorted in descending order of lifetime damageCount to instantly prioritize hardware inspection and replacement.
+            Registered for <span className="text-white font-semibold">{user?.assignedLab?.labName || 'Your Assigned Laboratory'}</span>. Sorted by lifetime damage count.
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5 shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Add Equipment
-        </button>
+        <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
+          {/* Go to Main Dashboard Button (Requirement 4.B) */}
+          <Link
+            to="/assistant"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5 text-cyan-400" />
+            Go to Main Dashboard
+          </Link>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Add Equipment
+          </button>
+        </div>
       </div>
 
       {successMsg && (
@@ -203,6 +228,7 @@ const EquipmentManagement = () => {
               <tr>
                 <th className="px-6 py-4">Equipment Details</th>
                 <th className="px-6 py-4">Bench Location</th>
+                <th className="px-6 py-4">Added On</th>
                 <th className="px-6 py-4">Operational Status</th>
                 <th className="px-6 py-4">Calibration Status</th>
                 <th className="px-6 py-4 text-center">Damage Count</th>
@@ -220,14 +246,25 @@ const EquipmentManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-300 font-medium">{eq.location}</td>
+                    <td className="px-6 py-4 font-mono text-slate-400 whitespace-nowrap">
+                      {eq.additionDate || eq.installationDate
+                        ? new Date(eq.additionDate || eq.installationDate).toLocaleDateString()
+                        : '—'}
+                    </td>
                     <td className="px-6 py-4">
                       <OperationalStatusBadge status={eq.operationalStatus} />
                     </td>
                     <td className="px-6 py-4">
-                      <CalibrationStatusBadge
-                        status={eq.calibrationHealth?.status}
-                        daysRemaining={eq.calibrationHealth?.daysRemaining}
-                      />
+                      {eq.nextCalibrationDate ? (
+                        <CalibrationStatusBadge
+                          status={eq.calibrationHealth?.status}
+                          daysRemaining={eq.calibrationHealth?.daysRemaining}
+                        />
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-white/10">
+                          Non-Calibrated
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
@@ -240,32 +277,25 @@ const EquipmentManagement = () => {
                         {eq.damageCount}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-                      {/* Generate QR Button */}
+                    <td className="px-6 py-4 text-right space-x-2">
                       <button
                         onClick={() => handleOpenQr(eq._id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 rounded-lg text-xs font-bold transition"
-                        title="Generate & Print QR Code"
+                        title="View / Print QR Code"
+                        className="p-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-400/20 transition cursor-pointer"
                       >
                         <QrCode className="w-3.5 h-3.5" />
-                        QR Sticker
                       </button>
-
-                      {/* Edit Button */}
                       <button
                         onClick={() => handleOpenEdit(eq)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/15 text-slate-200 rounded-lg text-xs font-semibold transition"
-                        title="Update Status / Location"
+                        title="Edit Status / Location"
+                        className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-400/20 transition cursor-pointer"
                       >
-                        <Edit2 className="w-3.5 h-3.5 text-slate-400" />
-                        Edit
+                        <Edit2 className="w-3.5 h-3.5" />
                       </button>
-
-                      {/* Archive Button */}
                       <button
                         onClick={() => handleArchive(eq._id, eq.name)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-semibold transition"
                         title="Archive Equipment"
+                        className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition cursor-pointer"
                       >
                         <Archive className="w-3.5 h-3.5" />
                       </button>
@@ -274,8 +304,8 @@ const EquipmentManagement = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-slate-400">
-                    No equipment found. Click "Add Equipment" to register your first instrument.
+                  <td colSpan="7" className="px-6 py-10 text-center text-slate-400">
+                    No equipment found in inventory.
                   </td>
                 </tr>
               )}
@@ -284,75 +314,10 @@ const EquipmentManagement = () => {
         </div>
       </div>
 
-      {/* QR Code Modal (High-Contrast Printable Sticker) */}
-      {showQrModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-sm p-6 sm:p-7 shadow-2xl relative text-center text-white">
-            <button
-              onClick={() => setShowQrModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="font-bold text-lg text-white mb-1">Equipment QR Sticker</h3>
-            <p className="text-xs text-slate-400 mb-5">
-              Print and affix this sticker onto the physical equipment casing.
-            </p>
-
-            {qrLoading || !qrData ? (
-              <div className="py-12 text-slate-400 text-xs">Generating QR...</div>
-            ) : (
-              <div>
-                <div
-                  id="printable-qr"
-                  className="bg-white text-slate-900 border-2 border-slate-900 rounded-2xl p-5 inline-block shadow-lg mb-5"
-                >
-                  <p className="text-[11px] font-black tracking-widest text-slate-900 uppercase">
-                    {qrData.labName}
-                  </p>
-                  <img
-                    src={qrData.qrDataUrl}
-                    alt="Equipment QR Code"
-                    className="w-48 h-48 mx-auto my-2 border border-slate-200 rounded-xl"
-                  />
-                  <p className="font-bold text-xs text-slate-900 truncate max-w-[200px] mx-auto">
-                    {qrData.name}
-                  </p>
-                  <p className="font-mono text-[10px] text-slate-600">SN: {qrData.serialNumber}</p>
-                  <p className="text-[9px] text-slate-500 mt-1 uppercase tracking-tight font-bold">
-                    Scan via Google Lens
-                  </p>
-                </div>
-
-                <div className="space-y-2.5">
-                  <button
-                    onClick={() => window.print()}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Print Sticker Label
-                  </button>
-
-                  <a
-                    href={qrData.targetUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition"
-                  >
-                    Open Public Mobile View <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Add Equipment Modal */}
+      {/* Add Equipment Modal (Requirement 4.A) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-md p-6 sm:p-7 shadow-2xl relative text-white">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl relative text-white max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowAddModal(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white"
@@ -365,9 +330,24 @@ const EquipmentManagement = () => {
                 <Cpu className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-white">Register Equipment</h3>
-                <p className="text-xs text-slate-400">Initializes damageCount=0 and generates QR code</p>
+                <h3 className="font-bold text-lg text-white">Register Lab Equipment</h3>
+                <p className="text-xs text-slate-400">Registers into your assigned laboratory automatically</p>
               </div>
+            </div>
+
+            {/* Auto-detected Laboratory Display (Requirement 4.A.2 & 4.A.3) */}
+            <div className="mb-4 p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-400/25 flex items-center justify-between text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-cyan-400 block tracking-wider">
+                  Assigned Laboratory (Auto-Enforced)
+                </span>
+                <span className="font-bold text-white text-sm">
+                  {user?.assignedLab?.labName || 'Assigned Laboratory'}
+                </span>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-black/40 text-cyan-300 font-mono text-[11px] border border-cyan-400/20">
+                {user?.assignedLab?.labId || 'LAB'}
+              </span>
             </div>
 
             {error && (
@@ -378,21 +358,21 @@ const EquipmentManagement = () => {
             )}
 
             <form onSubmit={handleCreateEquipment} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Equipment Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Digital Storage Oscilloscope 100MHz"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
-                />
-              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Equipment Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Digital Storage Oscilloscope"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
 
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                     Serial Number
@@ -400,52 +380,94 @@ const EquipmentManagement = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. TEK-2024-902"
+                    placeholder="e.g. TEK-2024-001"
                     value={serialNumber}
                     onChange={(e) => setSerialNumber(e.target.value)}
-                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition font-mono"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Model (Optional)
+                    Model / Specification
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. TBS1102B"
+                    placeholder="e.g. Tektronix TBS1102B"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Bench / Physical Location
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Bench 04, Room 102"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
               </div>
 
+              {/* Equipment Addition Date (Requirement 4.A.1) */}
               <div>
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Bench / Room Location
+                  Equipment Addition Date
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Bench 04, Electronics Lab"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
-                />
+                <div className="relative">
+                  <Calendar className="w-4 h-4 text-cyan-400 absolute left-3.5 top-2.5" />
+                  <input
+                    type="date"
+                    required
+                    value={additionDate}
+                    onChange={(e) => setAdditionDate(e.target.value)}
+                    className="w-full bg-[#081124] border border-white/15 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Calibration Interval (Days)
+              {/* Optional Calibration Interval (Requirement 4.A.5 & 4.A.6) */}
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={requiresCalibration}
+                    onChange={(e) => setRequiresCalibration(e.target.checked)}
+                    className="w-4 h-4 rounded border-white/20 text-cyan-500 focus:ring-0 bg-[#081124] cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-slate-200">
+                    Requires Periodic Calibration Verification
+                  </span>
                 </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={calibrationIntervalDays}
-                  onChange={(e) => setCalibrationIntervalDays(e.target.value)}
-                  className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
-                />
+
+                {requiresCalibration && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Calibration Interval (Days)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={3650}
+                      required={requiresCalibration}
+                      value={calibrationIntervalDays}
+                      onChange={(e) => setCalibrationIntervalDays(e.target.value)}
+                      placeholder="e.g. 180"
+                      className="w-full bg-[#081124] border border-white/15 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Default is 180 days (~6 months). Leave unchecked for non-calibrated furniture/tools.
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-3">
@@ -528,6 +550,40 @@ const EquipmentManagement = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Printable Modal */}
+      {showQrModal && qrData && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f1d38] border border-white/15 rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl relative text-white">
+            <button
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="font-bold text-base text-white">{qrData.equipmentName}</h3>
+            <p className="text-xs text-slate-400 font-mono mt-0.5">SN: {qrData.serialNumber}</p>
+            <p className="text-xs text-cyan-400 mt-0.5">{qrData.labName} • {qrData.labBlock}</p>
+
+            <div className="my-5 p-4 bg-white rounded-2xl inline-block shadow-xl">
+              <img src={qrData.qrCodeDataUrl} alt="Equipment QR Code" className="w-48 h-48 mx-auto" />
+            </div>
+
+            <p className="text-[11px] text-slate-400 font-mono break-all mb-4">
+              Public QR ID: <span className="text-cyan-300 font-bold">{qrData.publicId}</span>
+            </p>
+
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-xs font-bold shadow-lg"
+            >
+              <Printer className="w-4 h-4" />
+              Print QR Label
+            </button>
           </div>
         </div>
       )}

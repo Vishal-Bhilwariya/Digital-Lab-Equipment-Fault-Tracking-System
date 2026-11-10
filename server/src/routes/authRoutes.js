@@ -2,6 +2,9 @@ import express from 'express';
 import {
   login,
   getMe,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
   setupPassword,
   changePassword,
   adminResetPassword,
@@ -10,6 +13,9 @@ import {
 import { protect, authorizeRole } from '../middleware/auth.js';
 import {
   validateLogin,
+  validateForgotPassword,
+  validateVerifyOtp,
+  validateResetPassword,
   validateSetupPassword,
   validateChangePassword
 } from '../middleware/validators.js';
@@ -19,6 +25,9 @@ const router = express.Router();
 
 // ── Public Routes ─────────────────────────────────────────────────────────────
 router.post('/login', validateLogin, login);
+router.post('/forgot-password', validateForgotPassword, forgotPassword);
+router.post('/verify-otp', validateVerifyOtp, verifyOtp);
+router.post('/reset-password', validateResetPassword, resetPassword);
 router.post('/setup-password', validateSetupPassword, setupPassword);
 
 // ── Authenticated Routes ──────────────────────────────────────────────────────

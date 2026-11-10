@@ -31,6 +31,20 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(ROLES),
       required: [true, 'Role is required']
     },
+    rollNumber: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      sparse: true,
+      index: true
+    },
+    assistantId: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      sparse: true,
+      index: true
+    },
     assignedLabId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Lab',
@@ -38,11 +52,42 @@ const userSchema = new mongoose.Schema(
         return this.role === ROLES.ASSISTANT;
       }
     },
+    mustChangePassword: {
+      type: Boolean,
+      default: false
+    },
+    // Setup token for invitation links (legacy / fallback)
     setupToken: {
       type: String,
       select: false
     },
     setupTokenExpires: {
+      type: Date,
+      select: false
+    },
+    // Forgot Password OTP fields
+    resetPasswordOtp: {
+      type: String,
+      select: false
+    },
+    resetPasswordOtpExpires: {
+      type: Date,
+      select: false
+    },
+    resetPasswordOtpAttempts: {
+      type: Number,
+      default: 0,
+      select: false
+    },
+    resetPasswordOtpCooldown: {
+      type: Date,
+      select: false
+    },
+    resetPasswordToken: {
+      type: String,
+      select: false
+    },
+    resetPasswordTokenExpires: {
       type: Date,
       select: false
     },
@@ -66,9 +111,18 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 userSchema.methods.createSetupToken = function () {
   const setupTokenRaw = crypto.randomBytes(32).toString('hex');
   this.setupToken = crypto.createHash('sha256').update(setupTokenRaw).digest('hex');
-  // Token valid for 48 hours
   this.setupTokenExpires = Date.now() + 48 * 60 * 60 * 1000;
   return setupTokenRaw;
+};
+
+// Generate 6-digit OTP for Forgot Password
+userSchema.methods.createPasswordResetOtp = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  this.resetPasswordOtp = crypto.createHash('sha256').update(otp).digest('hex');
+  this.resetPasswordOtpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes expiration
+  this.resetPasswordOtpAttempts = 0;
+  this.resetPasswordOtpCooldown = Date.now() + 60 * 1000; // 60s cooldown for resend
+  return otp;
 };
 
 const User = mongoose.model('User', userSchema);

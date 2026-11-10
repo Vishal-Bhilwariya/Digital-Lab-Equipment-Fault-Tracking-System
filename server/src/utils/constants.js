@@ -2,7 +2,8 @@ import crypto from 'crypto';
 
 export const ROLES = Object.freeze({
   ADMIN: 'Admin',
-  ASSISTANT: 'Assistant'
+  ASSISTANT: 'Assistant',
+  STUDENT: 'Student'
 });
 
 // The Three Strictly Independent Statuses
@@ -15,14 +16,16 @@ export const OPERATIONAL_STATUS = Object.freeze({
 export const CALIBRATION_STATUS = Object.freeze({
   VALID: 'Valid',
   DUE_SOON: 'Due Soon',
-  OVERDUE: 'Overdue'
+  OVERDUE: 'Overdue',
+  NOT_APPLICABLE: 'Not Applicable'
 });
 
 export const TICKET_STATUS = Object.freeze({
   OPEN: 'Open',
   UNDER_REVIEW: 'Under Review',
   IN_REPAIR: 'In Repair',
-  RESOLVED: 'Resolved'
+  RESOLVED: 'Resolved',
+  EXPIRED: 'Expired'
 });
 
 /**
@@ -31,6 +34,22 @@ export const TICKET_STATUS = Object.freeze({
 export const generateLabId = () => {
   const randomSuffix = crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase();
   return `LAB-${randomSuffix}`;
+};
+
+/**
+ * Generate unique Assistant ID: e.g. "AST-4B9F2"
+ */
+export const generateAssistantId = () => {
+  const randomSuffix = crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase();
+  return `AST-${randomSuffix}`;
+};
+
+/**
+ * Generate a secure random temporary password (e.g. "Lab#782914")
+ */
+export const generateTempPassword = () => {
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  return `Lab#${randomNum}`;
 };
 
 /**
@@ -57,7 +76,7 @@ export const generateTicketId = () => {
  * Positive -> Upcoming
  */
 export const calculateCalibrationHealth = (nextCalibrationDate, dueSoonThresholdDays = 15) => {
-  if (!nextCalibrationDate) return { status: CALIBRATION_STATUS.OVERDUE, daysRemaining: -999 };
+  if (!nextCalibrationDate) return { status: CALIBRATION_STATUS.NOT_APPLICABLE, daysRemaining: null };
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);

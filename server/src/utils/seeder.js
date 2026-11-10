@@ -18,7 +18,14 @@ import Lab from '../models/Lab.js';
 import Equipment from '../models/Equipment.js';
 import Ticket from '../models/Ticket.js';
 import CalibrationLog from '../models/CalibrationLog.js';
-import { ROLES, OPERATIONAL_STATUS, TICKET_STATUS, generateLabId, generatePublicId, generateTicketId } from './constants.js';
+import {
+  ROLES,
+  OPERATIONAL_STATUS,
+  TICKET_STATUS,
+  generateLabId,
+  generatePublicId,
+  generateTicketId
+} from './constants.js';
 
 const seedDatabase = async () => {
   try {
@@ -68,6 +75,7 @@ const seedDatabase = async () => {
     const assistHash1  = await bcrypt.hash('Assistant@123', 12);
     const assistHash2  = await bcrypt.hash('Assistant@123', 12);
     const assistHash3  = await bcrypt.hash('Assistant@123', 12);
+    const studentHash  = await bcrypt.hash('Student@123', 12);
 
     // ── 3. Create System Administrator ─────────────────────────────────────
     const admin = await User.create({
@@ -85,6 +93,7 @@ const seedDatabase = async () => {
       name: 'Rahul Sharma',
       email: 'rahul.sharma@labtrack.edu',
       mobile: '9800000002',
+      assistantId: 'AST-CH01',
       passwordHash: assistHash1,
       role: ROLES.ASSISTANT,
       assignedLabId: chemLab._id,
@@ -95,6 +104,7 @@ const seedDatabase = async () => {
       name: 'Priya Verma',
       email: 'priya.verma@labtrack.edu',
       mobile: '9800000003',
+      assistantId: 'AST-PH02',
       passwordHash: assistHash2,
       role: ROLES.ASSISTANT,
       assignedLabId: physicsLab._id,
@@ -105,6 +115,7 @@ const seedDatabase = async () => {
       name: 'Amit Gupta',
       email: 'amit.gupta@labtrack.edu',
       mobile: '9800000004',
+      assistantId: 'AST-EL03',
       passwordHash: assistHash3,
       role: ROLES.ASSISTANT,
       assignedLabId: electronicsLab._id,
@@ -112,6 +123,18 @@ const seedDatabase = async () => {
     });
 
     console.log(`[Seeder] Created Assistants: ${assistant1.email}, ${assistant2.email}, ${assistant3.email}`);
+
+    // ── 4.1 Create Sample Student ───────────────────────────────────────────
+    const student1 = await User.create({
+      name: 'Vishal Bhilwariya',
+      email: 'vishal@student.gla.ac.in',
+      mobile: '9876543210',
+      rollNumber: '2200290100018',
+      role: ROLES.STUDENT,
+      passwordHash: studentHash,
+      isActive: true
+    });
+    console.log(`[Seeder] Created Student: ${student1.name} (${student1.rollNumber})`);
 
     // ── 5. Create Equipment in Chemistry Lab 1 ──────────────────────────────
     const dso = await Equipment.create({
@@ -121,6 +144,7 @@ const seedDatabase = async () => {
       serialNumber: 'DSO-TEK-2024-001',
       model: 'Tektronix TBS1102B',
       location: 'Bench 04, Room 102',
+      additionDate: new Date(),
       operationalStatus: OPERATIONAL_STATUS.READY_TO_USE,
       damageCount: 0,
       calibrationIntervalDays: 180,
@@ -135,6 +159,7 @@ const seedDatabase = async () => {
       serialNumber: 'DMM-FLUKE-2024-099',
       model: 'Fluke 179',
       location: 'Bench 02, Room 102',
+      additionDate: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
       operationalStatus: OPERATIONAL_STATUS.DAMAGED,
       damageCount: 2,
       calibrationIntervalDays: 90,
@@ -149,11 +174,28 @@ const seedDatabase = async () => {
       serialNumber: 'PHM-HANNA-2023-07',
       model: 'Hanna HI2210',
       location: 'Wet Lab Counter A, Room 103',
+      additionDate: new Date(Date.now() - 65 * 24 * 60 * 60 * 1000),
       operationalStatus: OPERATIONAL_STATUS.UNDER_REPAIR,
       damageCount: 1,
       calibrationIntervalDays: 60,
       lastCalibrationDate: new Date(Date.now() - 65 * 24 * 60 * 60 * 1000),
       nextCalibrationDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)   // overdue by 5 days
+    });
+
+    // Optional Non-Calibrated Equipment test record
+    const workbenchStool = await Equipment.create({
+      publicId: generatePublicId(),
+      labId: chemLab._id,
+      name: 'Anti-Static Lab Workstation & Bench',
+      serialNumber: 'STN-CHEM-004',
+      model: 'ESD Safe Workstation',
+      location: 'Bench Row 3, Room 102',
+      additionDate: new Date(),
+      operationalStatus: OPERATIONAL_STATUS.READY_TO_USE,
+      damageCount: 0,
+      calibrationIntervalDays: null,
+      lastCalibrationDate: null,
+      nextCalibrationDate: null
     });
 
     // ── 6. Create Equipment in Physics Lab 2 ───────────────────────────────
@@ -164,11 +206,12 @@ const seedDatabase = async () => {
       serialNumber: 'SONO-PHYS-2022-003',
       model: 'Generic Wooden Sonometer',
       location: 'Lab Rack 1, Room 201',
+      additionDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       operationalStatus: OPERATIONAL_STATUS.READY_TO_USE,
       damageCount: 0,
       calibrationIntervalDays: 365,
       lastCalibrationDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      nextCalibrationDate: new Date(Date.now() + 335 * 24 * 60 * 60 * 1000) // due in ~11 months
+      nextCalibrationDate: new Date(Date.now() + 335 * 24 * 60 * 60 * 1000)
     });
 
     const laserKit = await Equipment.create({
@@ -178,11 +221,12 @@ const seedDatabase = async () => {
       serialNumber: 'LASER-OPT-2024-011',
       model: 'Thorlabs CPS532',
       location: 'Optical Bench, Room 203',
+      additionDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       operationalStatus: OPERATIONAL_STATUS.READY_TO_USE,
       damageCount: 0,
       calibrationIntervalDays: 180,
       lastCalibrationDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-      nextCalibrationDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)  // due in 10 days (Due Soon)
+      nextCalibrationDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
     });
 
     // ── 7. Create Equipment in Electronics Lab ──────────────────────────────
@@ -193,24 +237,26 @@ const seedDatabase = async () => {
       serialNumber: 'FG-RIGS-2023-004',
       model: 'Rigol DG1022Z',
       location: 'Bench 01, Room 301',
+      additionDate: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
       operationalStatus: OPERATIONAL_STATUS.READY_TO_USE,
       damageCount: 0,
       calibrationIntervalDays: 365,
       lastCalibrationDate: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
-      nextCalibrationDate: new Date(Date.now() + 165 * 24 * 60 * 60 * 1000) // due in ~5 months
+      nextCalibrationDate: new Date(Date.now() + 165 * 24 * 60 * 60 * 1000)
     });
 
-    console.log(`[Seeder] Seeded ${7} equipment records across 3 labs`);
+    console.log(`[Seeder] Seeded equipment records across 3 labs (including non-calibrated hardware)`);
 
     // ── 8. Create Sample Fault Tickets ──────────────────────────────────────
     const ticket1 = await Ticket.create({
       ticketId: generateTicketId(),
       equipmentId: multimeter._id,
       labId: chemLab._id,
-      studentName: 'Vishal Bhilwariya',
-      rollNumber: '2200290100018',
-      mobile: '9876543210',
-      email: 'vishal@student.gla.ac.in',
+      studentId: student1._id,
+      studentName: student1.name,
+      rollNumber: student1.rollNumber,
+      mobile: student1.mobile,
+      email: student1.email,
       description: 'Display is flickering and readings are inconsistent. LCD shows garbled characters when measuring AC voltage above 200V.',
       photoUrl: 'https://via.placeholder.com/640x480.png?text=Multimeter+Display+Fault',
       ticketStatus: TICKET_STATUS.UNDER_REVIEW
@@ -229,14 +275,14 @@ const seedDatabase = async () => {
       ticketStatus: TICKET_STATUS.IN_REPAIR
     });
 
-    console.log(`[Seeder] Created ${2} sample fault tickets`);
+    console.log(`[Seeder] Created sample fault tickets`);
 
     // ── 9. Create Sample Calibration Logs ──────────────────────────────────
     await CalibrationLog.create({
       equipmentId: dso._id,
       labId: chemLab._id,
       calibratedBy: 'National Instruments Calibration Services',
-      calibrationDate: new Date(Date.now() - 0),   // today
+      calibrationDate: new Date(),
       nextDueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
       remarks: 'All channels within tolerance. Bandwidth verified at 100MHz.'
     });
@@ -264,18 +310,16 @@ const seedDatabase = async () => {
     console.log('     Password: Admin@123');
     console.log('');
     console.log('  🔧 Lab Assistant (Chemistry Lab 1)');
+    console.log('     ID:       AST-CH01');
     console.log('     Email:    rahul.sharma@labtrack.edu');
     console.log('     Password: Assistant@123');
     console.log('');
-    console.log('  🔧 Lab Assistant (Physics Lab 2)');
-    console.log('     Email:    priya.verma@labtrack.edu');
-    console.log('     Password: Assistant@123');
+    console.log('  🎓 Student Account');
+    console.log('     Roll No:  2200290100018');
+    console.log('     Email:    vishal@student.gla.ac.in');
+    console.log('     Password: Student@123');
     console.log('');
-    console.log('  🔧 Lab Assistant (Electronics Lab)');
-    console.log('     Email:    amit.gupta@labtrack.edu');
-    console.log('     Password: Assistant@123');
-    console.log('');
-    console.log(`  QR Public IDs for testing:  ${dso.publicId}  |  ${multimeter.publicId}`);
+    console.log(`  QR Public IDs:  ${dso.publicId}  |  ${multimeter.publicId}`);
     console.log('');
     console.log('  Open: http://localhost:5173');
     console.log('═══════════════════════════════════════════════════════════\n');
@@ -283,10 +327,6 @@ const seedDatabase = async () => {
     process.exit(0);
   } catch (error) {
     console.error(`\n[Seeder] ❌ Error: ${error.message}`);
-    if (error.message.includes('ECONNREFUSED') || error.message.includes('Could not connect')) {
-      console.error('[Seeder]    → Your IP may not be whitelisted in MongoDB Atlas.');
-      console.error('[Seeder]    → Go to: https://cloud.mongodb.com → Security → Network Access → Add IP\n');
-    }
     process.exit(1);
   }
 };

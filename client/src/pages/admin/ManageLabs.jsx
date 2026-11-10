@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import { Building2, Plus, Archive, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+import {
+  Building2,
+  Plus,
+  Archive,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Sparkles,
+  LayoutDashboard,
+  Search
+} from 'lucide-react';
 
 const ManageLabs = () => {
   const [labs, setLabs] = useState([]);
@@ -11,11 +23,13 @@ const ManageLabs = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL', 'ACTIVE', 'ARCHIVED'
+  const [search, setSearch] = useState('');
 
   const fetchLabs = async () => {
     try {
       const res = await api.get('/labs?includeArchived=true');
-      setLabs(res.data.data);
+      setLabs(res.data.data || []);
     } catch (err) {
       console.error('Failed to load labs:', err);
     } finally {
@@ -47,13 +61,18 @@ const ManageLabs = () => {
     }
   };
 
+  // Archive Laboratory (Soft-delete)
   const handleArchiveLab = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to archive '${name}'? Existing equipment and records remain safe for audit compliance.`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to archive '${name}'? Existing equipment and records remain safe for audit compliance.`
+      )
+    ) {
       return;
     }
 
     try {
-      await api.patch(`/labs/${id}/archive`);
+      await api.patch(`/labs/${id}/archive?force=true`);
       fetchLabs();
       setSuccessMsg(`Laboratory '${name}' has been safely archived.`);
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -61,6 +80,33 @@ const ManageLabs = () => {
       alert(err.response?.data?.message || 'Failed to archive lab');
     }
   };
+
+  // Restore / Unarchive Laboratory (Requirement 3.B)
+  const handleRestoreLab = async (id, name) => {
+    try {
+      await api.patch(`/labs/${id}/reactivate`);
+      fetchLabs();
+      setSuccessMsg(`Laboratory '${name}' has been restored and moved back to active list.`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to restore laboratory');
+    }
+  };
+
+  const filteredLabs = labs.filter((l) => {
+    const matchesSearch =
+      l.labName.toLowerCase().includes(search.toLowerCase()) ||
+      l.labId.toLowerCase().includes(search.toLowerCase()) ||
+      l.labBlock.toLowerCase().includes(search.toLowerCase());
+
+    if (statusFilter === 'ALL') return matchesSearch;
+    if (statusFilter === 'ACTIVE') return matchesSearch && l.isActive;
+    if (statusFilter === 'ARCHIVED') return matchesSearch && !l.isActive;
+    return matchesSearch;
+  });
+
+  const activeCount = labs.filter((l) => l.isActive).length;
+  const archivedCount = labs.filter((l) => !l.isActive).length;
 
   return (
     <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full space-y-7">
@@ -76,17 +122,26 @@ const ManageLabs = () => {
             Laboratories Directory
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Create physical laboratory departments. The system automatically assigns a unique string identifier (e.g. LAB-A8F21).
+            Create and maintain physical laboratory departments. Safely archive and restore labs anytime with full data preservation.
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5 shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Add New Laboratory
-        </button>
+        <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5 text-cyan-400" />
+            Go to Main Dashboard
+          </Link>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Add New Laboratory
+          </button>
+        </div>
       </div>
 
       {successMsg && (
@@ -95,6 +150,55 @@ const ManageLabs = () => {
           <span>{successMsg}</span>
         </div>
       )}
+
+      {/* Filter Tabs and Search Bar */}
+      <div className="rounded-2xl p-4 border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative w-full max-w-md">
+          <Search className="w-4 h-4 text-cyan-400 absolute left-3.5 top-3" />
+          <input
+            type="text"
+            placeholder="Search by lab name, code, or building block..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-[#081124] border border-white/15 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+          />
+        </div>
+
+        {/* Filter Tabs (All / Active / Archived) */}
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          <button
+            onClick={() => setStatusFilter('ALL')}
+            className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              statusFilter === 'ALL'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white'
+            }`}
+          >
+            All Labs ({labs.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('ACTIVE')}
+            className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              statusFilter === 'ACTIVE'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white'
+            }`}
+          >
+            Active ({activeCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('ARCHIVED')}
+            className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              statusFilter === 'ARCHIVED'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white'
+            }`}
+          >
+            Archived ({archivedCount})
+          </button>
+        </div>
+      </div>
 
       {/* Labs Table */}
       <div className="rounded-3xl border border-white/10 bg-[#0d182e]/80 backdrop-blur-xl shadow-2xl overflow-hidden">
@@ -105,17 +209,21 @@ const ManageLabs = () => {
                 <th className="px-6 py-4">Lab ID (Auto-Generated)</th>
                 <th className="px-6 py-4">Laboratory Name</th>
                 <th className="px-6 py-4">Block / Building</th>
+                <th className="px-6 py-4">Active Equipment</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.06]">
-              {labs.length > 0 ? (
-                labs.map((lab) => (
+              {filteredLabs.length > 0 ? (
+                filteredLabs.map((lab) => (
                   <tr key={lab._id} className="hover:bg-white/[0.03] transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-cyan-400 text-sm">{lab.labId}</td>
                     <td className="px-6 py-4 font-bold text-white text-sm">{lab.labName}</td>
                     <td className="px-6 py-4 text-slate-300">{lab.labBlock}</td>
+                    <td className="px-6 py-4 font-mono text-slate-300">
+                      {lab.equipmentCount !== undefined ? lab.equipmentCount : '—'}
+                    </td>
                     <td className="px-6 py-4">
                       {lab.isActive ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
@@ -123,19 +231,28 @@ const ManageLabs = () => {
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-white/10">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                          <Archive className="w-3.5 h-3.5" />
                           Archived
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {lab.isActive && (
+                      {lab.isActive ? (
                         <button
                           onClick={() => handleArchiveLab(lab._id, lab.labName)}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 px-3 py-1.5 rounded-lg transition"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 px-3 py-1.5 rounded-lg transition cursor-pointer"
                         >
                           <Archive className="w-3.5 h-3.5" />
                           Archive
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRestoreLab(lab._id, lab.labName)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 hover:text-white bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Restore Lab
                         </button>
                       )}
                     </td>
@@ -143,8 +260,8 @@ const ManageLabs = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-10 text-center text-slate-400">
-                    No laboratories registered yet. Click "Add New Laboratory" to register your first lab.
+                  <td colSpan="6" className="px-6 py-10 text-center text-slate-400">
+                    No laboratories found. Click "Add New Laboratory" to register your first lab.
                   </td>
                 </tr>
               )}

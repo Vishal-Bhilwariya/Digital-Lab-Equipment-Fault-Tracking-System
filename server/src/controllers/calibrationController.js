@@ -115,7 +115,7 @@ export const getEquipmentCalibrationHistory = async (req, res, next) => {
  */
 export const getCalibrationSchedule = async (req, res, next) => {
   try {
-    let query = { isActive: true };
+    let query = { isActive: true, nextCalibrationDate: { $exists: true, $ne: null } };
 
     if (req.user.role === ROLES.ASSISTANT) {
       const assignedId = req.user.assignedLabId?._id || req.user.assignedLabId;

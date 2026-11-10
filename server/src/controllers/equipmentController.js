@@ -15,9 +15,10 @@ export const createEquipment = async (req, res, next) => {
       serialNumber,
       model,
       location,
+      additionDate,
       installationDate,
-      calibrationIntervalDays = 180,
-      lastCalibrationDate = new Date(),
+      calibrationIntervalDays,
+      lastCalibrationDate,
       nextCalibrationDate
     } = req.body;
 
@@ -28,8 +29,13 @@ export const createEquipment = async (req, res, next) => {
       });
     }
 
-    // Determine target lab
-    const labId = req.user.role === ROLES.ADMIN ? req.body.labId : req.user.assignedLabId;
+    // Determine target lab — Assistant can ONLY register for their assigned laboratory
+    let labId;
+    if (req.user.role === ROLES.ASSISTANT) {
+      labId = req.user.assignedLabId?._id || req.user.assignedLabId;
+    } else {
+      labId = req.body.labId || req.user.assignedLabId?._id || req.user.assignedLabId;
+    }
 
     if (!labId) {
       return res.status(400).json({
@@ -47,33 +53,46 @@ export const createEquipment = async (req, res, next) => {
       });
     }
 
-    // Auto calculate nextCalibrationDate if not provided
-    let calculatedNextDate = nextCalibrationDate;
-    if (!calculatedNextDate) {
-      const lastDate = new Date(lastCalibrationDate);
-      calculatedNextDate = new Date(lastDate.getTime() + calibrationIntervalDays * 24 * 60 * 60 * 1000);
+    // Handle optional calibration interval (some equipment may be damaged/simple and not require calibration)
+    let finalInterval = null;
+    let finalLastCal = null;
+    let calculatedNextDate = null;
+
+    if (calibrationIntervalDays && Number(calibrationIntervalDays) > 0) {
+      finalInterval = Number(calibrationIntervalDays);
+      finalLastCal = lastCalibrationDate ? new Date(lastCalibrationDate) : new Date();
+      if (nextCalibrationDate) {
+        calculatedNextDate = new Date(nextCalibrationDate);
+      } else {
+        calculatedNextDate = new Date(finalLastCal.getTime() + finalInterval * 24 * 60 * 60 * 1000);
+      }
     }
 
     // Ensure unique publicId
     let publicId = generatePublicId();
-    let existingPublic = await Equipment.findOne({ publicId });
-    while (existingPublic) {
+    while (await Equipment.findOne({ publicId })) {
       publicId = generatePublicId();
-      existingPublic = await Equipment.findOne({ publicId });
     }
+
+    const effectiveDate = additionDate
+      ? new Date(additionDate)
+      : installationDate
+      ? new Date(installationDate)
+      : new Date();
 
     const equipment = await Equipment.create({
       publicId,
       labId,
-      name,
-      serialNumber,
-      model,
-      location,
-      installationDate: installationDate || new Date(),
+      name: name.trim(),
+      serialNumber: serialNumber.trim(),
+      model: model ? model.trim() : '',
+      location: location.trim(),
+      additionDate: effectiveDate,
+      installationDate: effectiveDate,
       operationalStatus: OPERATIONAL_STATUS.READY_TO_USE,
       damageCount: 0,
-      calibrationIntervalDays,
-      lastCalibrationDate,
+      calibrationIntervalDays: finalInterval,
+      lastCalibrationDate: finalLastCal,
       nextCalibrationDate: calculatedNextDate
     });
 
@@ -162,6 +181,7 @@ export const getEquipmentByPublicId = async (req, res, next) => {
         serialNumber: equipment.serialNumber,
         model: equipment.model,
         location: equipment.location,
+        additionDate: equipment.additionDate || equipment.installationDate,
         labName: equipment.labId?.labName,
         labBlock: equipment.labId?.labBlock,
         labId: equipment.labId?.labId,
@@ -214,9 +234,9 @@ export const getEquipmentById = async (req, res, next) => {
 };
 
 /**
- * @desc    Update equipment details / operational status
+ * @desc    Update operational status or location
  * @route   PATCH /api/v1/equipment/:id
- * @access  Private (Assistant)
+ * @access  Private (Assistant, Admin)
  */
 export const updateEquipment = async (req, res, next) => {
   try {
@@ -235,28 +255,28 @@ export const updateEquipment = async (req, res, next) => {
       if (equipment.labId.toString() !== assignedId) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: Equipment belongs to another laboratory'
+          message: 'Access denied: You can only edit equipment in your assigned laboratory'
         });
       }
     }
 
-    const { name, model, location, operationalStatus, calibrationIntervalDays } = req.body;
+    const { name, location, operationalStatus, calibrationIntervalDays, nextCalibrationDate } = req.body;
 
-    if (name) equipment.name = name;
-    if (model !== undefined) equipment.model = model;
-    if (location) equipment.location = location;
-    if (operationalStatus && Object.values(OPERATIONAL_STATUS).includes(operationalStatus)) {
-      equipment.operationalStatus = operationalStatus;
+    if (name) equipment.name = name.trim();
+    if (location) equipment.location = location.trim();
+    if (operationalStatus) equipment.operationalStatus = operationalStatus;
+    if (calibrationIntervalDays !== undefined) {
+      equipment.calibrationIntervalDays = calibrationIntervalDays ? Number(calibrationIntervalDays) : null;
     }
-    if (calibrationIntervalDays) {
-      equipment.calibrationIntervalDays = Number(calibrationIntervalDays);
+    if (nextCalibrationDate !== undefined) {
+      equipment.nextCalibrationDate = nextCalibrationDate ? new Date(nextCalibrationDate) : null;
     }
 
     await equipment.save();
 
     res.status(200).json({
       success: true,
-      message: 'Equipment updated successfully',
+      message: 'Equipment record updated successfully',
       data: equipment
     });
   } catch (error) {
@@ -265,13 +285,13 @@ export const updateEquipment = async (req, res, next) => {
 };
 
 /**
- * @desc    Generate printable QR Code Data URL for equipment
+ * @desc    Generate or fetch Base64 QR code and direct landing URL for Equipment
  * @route   GET /api/v1/equipment/:id/qr
  * @access  Private (Assistant, Admin)
  */
 export const getEquipmentQR = async (req, res, next) => {
   try {
-    const equipment = await Equipment.findById(req.params.id).populate('labId', 'labName labId');
+    const equipment = await Equipment.findById(req.params.id).populate('labId', 'labName labId labBlock');
 
     if (!equipment) {
       return res.status(404).json({
@@ -280,18 +300,28 @@ export const getEquipmentQR = async (req, res, next) => {
       });
     }
 
-    // Generate QR
-    const { targetUrl, qrDataUrl } = await generateEquipmentQR(equipment.publicId);
+    // Verify lab isolation for assistant
+    if (req.user.role === ROLES.ASSISTANT) {
+      const assignedId = (req.user.assignedLabId?._id || req.user.assignedLabId).toString();
+      if (equipment.labId._id.toString() !== assignedId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: Equipment belongs to another laboratory'
+        });
+      }
+    }
+
+    const qrResult = await generateEquipmentQR(equipment.publicId);
 
     res.status(200).json({
       success: true,
       data: {
         publicId: equipment.publicId,
-        name: equipment.name,
+        equipmentName: equipment.name,
         serialNumber: equipment.serialNumber,
         labName: equipment.labId?.labName,
-        targetUrl,
-        qrDataUrl
+        labBlock: equipment.labId?.labBlock,
+        ...qrResult
       }
     });
   } catch (error) {
@@ -300,7 +330,7 @@ export const getEquipmentQR = async (req, res, next) => {
 };
 
 /**
- * @desc    Soft-delete / Archive Equipment
+ * @desc    Archive / Soft-delete equipment
  * @route   PATCH /api/v1/equipment/:id/archive
  * @access  Private (Assistant, Admin)
  */
@@ -321,7 +351,7 @@ export const archiveEquipment = async (req, res, next) => {
       if (equipment.labId.toString() !== assignedId) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: Equipment belongs to another laboratory'
+          message: 'Access denied: You can only archive equipment in your assigned laboratory'
         });
       }
     }
@@ -331,8 +361,7 @@ export const archiveEquipment = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `Equipment '${equipment.name}' archived successfully`,
-      data: equipment
+      message: `Equipment '${equipment.name}' archived successfully.`
     });
   } catch (error) {
     next(error);

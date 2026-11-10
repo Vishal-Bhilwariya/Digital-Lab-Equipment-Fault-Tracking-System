@@ -1,4 +1,5 @@
 import { body, param, query, validationResult } from 'express-validator';
+import { TICKET_STATUS, OPERATIONAL_STATUS } from '../utils/constants.js';
 
 /**
  * Run validation results and return 422 on first error
@@ -17,14 +18,57 @@ export const validate = (req, res, next) => {
 
 // ── Auth Validators ──────────────────────────────────────────────────────────
 export const validateLogin = [
+  body('password')
+    .notEmpty().withMessage('Password is required'),
+  body().custom((value, { req }) => {
+    if (!req.body.email && !req.body.rollNumber) {
+      throw new Error('Email address or Student Roll Number is required');
+    }
+    if (req.body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email.trim())) {
+      throw new Error('Please provide a valid email address');
+    }
+    return true;
+  }),
+  validate
+];
+
+export const validateForgotPassword = [
   body('email')
     .trim()
-    .notEmpty().withMessage('Email is required')
+    .notEmpty().withMessage('Registered email address is required')
     .isEmail().withMessage('Please provide a valid email address')
     .normalizeEmail(),
-  body('password')
-    .notEmpty().withMessage('Password is required')
-    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  validate
+];
+
+export const validateVerifyOtp = [
+  body('email')
+    .trim()
+    .notEmpty().withMessage('Email address is required')
+    .isEmail().withMessage('Please provide a valid email address')
+    .normalizeEmail(),
+  body('otp')
+    .trim()
+    .notEmpty().withMessage('6-digit OTP code is required')
+    .isLength({ min: 6, max: 6 }).withMessage('OTP must be exactly 6 digits')
+    .isNumeric().withMessage('OTP must only contain numbers'),
+  validate
+];
+
+export const validateResetPassword = [
+  body('email')
+    .trim()
+    .notEmpty().withMessage('Email address is required')
+    .isEmail().withMessage('Please provide a valid email address')
+    .normalizeEmail(),
+  body('resetToken')
+    .trim()
+    .notEmpty().withMessage('Verification reset token is required'),
+  body('newPassword')
+    .notEmpty().withMessage('New password is required')
+    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+    .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
+    .withMessage('Password must contain at least one letter and one number'),
   validate
 ];
 
@@ -98,17 +142,14 @@ export const validateCreateEquipment = [
   body('location')
     .trim()
     .notEmpty().withMessage('Physical location / bench is required'),
+  body('additionDate')
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601().withMessage('Addition date must be a valid date'),
   body('nextCalibrationDate')
-    .optional()
-    .isISO8601().withMessage('nextCalibrationDate must be a valid ISO date')
-    .custom((val) => {
-      if (new Date(val) <= new Date()) {
-        throw new Error('Next calibration date must be in the future');
-      }
-      return true;
-    }),
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601().withMessage('nextCalibrationDate must be a valid ISO date'),
   body('calibrationIntervalDays')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .isInt({ min: 1, max: 3650 }).withMessage('Calibration interval must be 1–3650 days'),
   validate
 ];
@@ -124,7 +165,7 @@ export const validateUpdateEquipment = [
     .notEmpty().withMessage('Location cannot be empty'),
   body('operationalStatus')
     .optional()
-    .isIn(['Ready to Use', 'Under Repair', 'Damaged'])
+    .isIn(Object.values(OPERATIONAL_STATUS))
     .withMessage('Invalid operational status'),
   validate
 ];
@@ -147,7 +188,8 @@ export const validateCreateTicket = [
     .notEmpty().withMessage('Mobile number is required')
     .isMobilePhone('any').withMessage('Please provide a valid mobile number'),
   body('email')
-    .optional()
+    .trim()
+    .notEmpty().withMessage('Email is required for ticket tracking and notifications')
     .isEmail().withMessage('Please provide a valid email address')
     .normalizeEmail(),
   body('description')
@@ -160,8 +202,8 @@ export const validateCreateTicket = [
 export const validateUpdateTicketStatus = [
   body('ticketStatus')
     .notEmpty().withMessage('Ticket status is required')
-    .isIn(['Open', 'Under Review', 'In Repair', 'Resolved'])
-    .withMessage('Invalid ticket status. Must be: Open, Under Review, In Repair, or Resolved'),
+    .isIn(Object.values(TICKET_STATUS))
+    .withMessage(`Invalid ticket status. Must be: ${Object.values(TICKET_STATUS).join(', ')}`),
   body('resolutionNotes')
     .if(body('ticketStatus').equals('Resolved'))
     .notEmpty().withMessage('Resolution notes are required when resolving a ticket')

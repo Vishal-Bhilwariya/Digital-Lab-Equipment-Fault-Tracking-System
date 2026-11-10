@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { generatePublicId, OPERATIONAL_STATUS } from '../utils/constants.js';
+import { generatePublicId, OPERATIONAL_STATUS, CALIBRATION_STATUS } from '../utils/constants.js';
 
 const equipmentSchema = new mongoose.Schema(
   {
@@ -35,6 +35,10 @@ const equipmentSchema = new mongoose.Schema(
       required: [true, 'Physical location/bench is required'],
       trim: true
     },
+    additionDate: {
+      type: Date,
+      default: Date.now
+    },
     installationDate: {
       type: Date,
       default: Date.now
@@ -50,18 +54,19 @@ const equipmentSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
+    // Optional calibration interval
     calibrationIntervalDays: {
       type: Number,
-      default: 180,
-      min: 1
+      min: 1,
+      default: null
     },
     lastCalibrationDate: {
       type: Date,
-      default: Date.now
+      default: null
     },
     nextCalibrationDate: {
       type: Date,
-      required: [true, 'Next calibration due date is required'],
+      default: null,
       index: true
     },
     isActive: {
@@ -76,6 +81,10 @@ const equipmentSchema = new mongoose.Schema(
 
 // Virtual for dynamic calibration health status
 equipmentSchema.virtual('calibrationHealth').get(function () {
+  if (!this.nextCalibrationDate) {
+    return { status: CALIBRATION_STATUS.NOT_APPLICABLE, daysRemaining: null };
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -84,9 +93,9 @@ equipmentSchema.virtual('calibrationHealth').get(function () {
 
   const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
 
-  if (diffDays < 0) return { status: 'Overdue', daysRemaining: diffDays };
-  if (diffDays <= 15) return { status: 'Due Soon', daysRemaining: diffDays };
-  return { status: 'Valid', daysRemaining: diffDays };
+  if (diffDays < 0) return { status: CALIBRATION_STATUS.OVERDUE, daysRemaining: diffDays };
+  if (diffDays <= 15) return { status: CALIBRATION_STATUS.DUE_SOON, daysRemaining: diffDays };
+  return { status: CALIBRATION_STATUS.VALID, daysRemaining: diffDays };
 });
 
 equipmentSchema.set('toJSON', { virtuals: true });

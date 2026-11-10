@@ -29,8 +29,16 @@ export const AuthProvider = ({ children }) => {
     verifyUser();
   }, [token]);
 
-  const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+  /**
+   * Unified login function
+   * Supports email/password (Staff/Student) or rollNumber/password (Student)
+   */
+  const login = async (identifier, password, isStudent = false) => {
+    const payload = isStudent
+      ? { rollNumber: identifier, password }
+      : { email: identifier, password };
+
+    const res = await api.post('/auth/login', payload);
     const { token: newToken, user: userData } = res.data;
 
     setToken(newToken);
@@ -48,6 +56,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('lab_auth_user');
   };
 
+  const updateUser = (updatedFields) => {
+    setUser((prev) => {
+      const merged = { ...prev, ...updatedFields };
+      localStorage.setItem('lab_auth_user', JSON.stringify(merged));
+      return merged;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -56,7 +72,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated: !!user,
         login,
-        logout
+        logout,
+        updateUser
       }}
     >
       {children}

@@ -21,6 +21,11 @@ const ticketSchema = new mongoose.Schema(
       required: [true, 'Lab reference is required'],
       index: true
     },
+    studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true
+    },
     studentName: {
       type: String,
       required: [true, 'Student name is required'],
@@ -30,7 +35,8 @@ const ticketSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Student roll number is required'],
       uppercase: true,
-      trim: true
+      trim: true,
+      index: true
     },
     mobile: {
       type: String,
@@ -39,8 +45,10 @@ const ticketSchema = new mongoose.Schema(
     },
     email: {
       type: String,
+      required: [true, 'Student email is required'],
       trim: true,
-      lowercase: true
+      lowercase: true,
+      index: true
     },
     description: {
       type: String,

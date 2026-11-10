@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import User from '../models/User.js';
+import { ROLES } from '../utils/constants.js';
+import { sendPasswordResetOtp } from '../services/emailService.js';
 
 // ── Helper: generate signed JWT ───────────────────────────────────────────────
 const generateToken = (id) => {
@@ -16,24 +18,39 @@ const generateToken = (id) => {
 };
 
 /**
- * @desc    Authenticate user & get token
+ * @desc    Authenticate user (Administrator, Lab Assistant, Student)
  * @route   POST /api/v1/auth/login
  * @access  Public
  */
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, rollNumber, password } = req.body;
 
-    // Find user and explicitly select passwordHash (excluded by default via schema)
-    const user = await User.findOne({ email: email.trim().toLowerCase() })
-      .select('+passwordHash')
-      .populate('assignedLabId', 'labName labId labBlock isActive');
+    let user;
+    if (rollNumber) {
+      // Student login using Roll Number
+      user = await User.findOne({
+        rollNumber: rollNumber.trim().toUpperCase(),
+        role: ROLES.STUDENT
+      }).select('+passwordHash');
+    } else if (email) {
+      // Staff or Student login using Email or Assistant ID
+      const cleaned = email.trim();
+      user = await User.findOne({
+        $or: [
+          { email: cleaned.toLowerCase() },
+          { assistantId: cleaned.toUpperCase() }
+        ]
+      })
+        .select('+passwordHash')
+        .populate('assignedLabId', 'labName labId labBlock isActive');
+    }
 
-    // Use same message for missing user & wrong password (prevents user enumeration)
+    // Generic error message to prevent account enumeration
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials. Please verify your email/roll number and password.'
       });
     }
 
@@ -47,7 +64,7 @@ export const login = async (req, res, next) => {
     if (!user.passwordHash) {
       return res.status(400).json({
         success: false,
-        message: 'Account password has not been set yet. Please check your invitation email and complete the account setup.'
+        message: 'Account password has not been set yet. Please check your invitation email.'
       });
     }
 
@@ -55,7 +72,7 @@ export const login = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials. Please verify your email/roll number and password.'
       });
     }
 
@@ -70,6 +87,9 @@ export const login = async (req, res, next) => {
         email: user.email,
         mobile: user.mobile,
         role: user.role,
+        rollNumber: user.rollNumber || null,
+        assistantId: user.assistantId || null,
+        mustChangePassword: !!user.mustChangePassword,
         assignedLab: user.assignedLabId || null
       }
     });
@@ -85,7 +105,6 @@ export const login = async (req, res, next) => {
  */
 export const getMe = async (req, res, next) => {
   try {
-    // req.user is set by protect middleware, re-fetch to ensure fresh data
     const user = await User.findById(req.user._id)
       .populate('assignedLabId', 'labName labId labBlock isActive');
 
@@ -101,6 +120,9 @@ export const getMe = async (req, res, next) => {
         email: user.email,
         mobile: user.mobile,
         role: user.role,
+        rollNumber: user.rollNumber || null,
+        assistantId: user.assistantId || null,
+        mustChangePassword: !!user.mustChangePassword,
         assignedLab: user.assignedLabId || null,
         isActive: user.isActive,
         createdAt: user.createdAt
@@ -112,38 +134,187 @@ export const getMe = async (req, res, next) => {
 };
 
 /**
- * @desc    Set initial password via invitation token (sent to new assistants by email)
- * @route   POST /api/v1/auth/setup-password
+ * @desc    Request 6-digit OTP for Forgot Password
+ * @route   POST /api/v1/auth/forgot-password
  * @access  Public
  */
-export const setupPassword = async (req, res, next) => {
+export const forgotPassword = async (req, res, next) => {
   try {
-    const { token, newPassword } = req.body;
+    const { email } = req.body;
+    const targetEmail = email.trim().toLowerCase();
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({ email: targetEmail }).select(
+      '+resetPasswordOtp +resetPasswordOtpExpires +resetPasswordOtpAttempts +resetPasswordOtpCooldown'
+    );
 
-    const user = await User.findOne({
-      setupToken: hashedToken,
-      setupTokenExpires: { $gt: Date.now() },
-      isActive: true
-    }).select('+setupToken +setupTokenExpires');
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired password setup link. Please ask your administrator to resend the invitation.'
+    // Security requirement: "Do not reveal whether an email exists."
+    if (!user || !user.isActive) {
+      return res.status(200).json({
+        success: true,
+        message: 'If this email address is registered, a 6-digit OTP code has been dispatched.'
       });
     }
 
-    const salt = await bcrypt.genSalt(12);
-    user.passwordHash = await bcrypt.hash(newPassword, salt);
-    user.setupToken = undefined;
-    user.setupTokenExpires = undefined;
+    // Rate-limit resend cooldown (60 seconds)
+    if (user.resetPasswordOtpCooldown && user.resetPasswordOtpCooldown > Date.now()) {
+      const waitSeconds = Math.ceil((user.resetPasswordOtpCooldown - Date.now()) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${waitSeconds}s before requesting a new OTP.`
+      });
+    }
+
+    // Generate, hash, and store 6-digit OTP
+    const rawOtp = user.createPasswordResetOtp();
+    await user.save();
+
+    // Send email using reusable Nodemailer service
+    await sendPasswordResetOtp({
+      toEmail: user.email,
+      name: user.name,
+      otp: rawOtp
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'If this email address is registered, a 6-digit OTP code has been dispatched.',
+      // In development mode, provide OTP for direct testing convenience
+      ...(process.env.NODE_ENV === 'development' && { devOtpPreview: rawOtp })
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify 6-digit OTP for Forgot Password
+ * @route   POST /api/v1/auth/verify-otp
+ * @access  Public
+ */
+export const verifyOtp = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    const targetEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({ email: targetEmail }).select(
+      '+resetPasswordOtp +resetPasswordOtpExpires +resetPasswordOtpAttempts'
+    );
+
+    if (!user || !user.resetPasswordOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP code. Please request a new one.'
+      });
+    }
+
+    // Check expiry (5 minutes)
+    if (user.resetPasswordOtpExpires < Date.now()) {
+      user.resetPasswordOtp = undefined;
+      user.resetPasswordOtpExpires = undefined;
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired (valid for 5 minutes). Please request a new one.'
+      });
+    }
+
+    // Check attempt limits (max 5)
+    if (user.resetPasswordOtpAttempts >= 5) {
+      user.resetPasswordOtp = undefined;
+      user.resetPasswordOtpExpires = undefined;
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        message: 'Too many incorrect attempts. For security, please request a fresh OTP.'
+      });
+    }
+
+    // Verify hash
+    const inputHash = crypto.createHash('sha256').update(otp.trim()).digest('hex');
+    if (inputHash !== user.resetPasswordOtp) {
+      user.resetPasswordOtpAttempts = (user.resetPasswordOtpAttempts || 0) + 1;
+      await user.save();
+      const remainingAttempts = 5 - user.resetPasswordOtpAttempts;
+      return res.status(400).json({
+        success: false,
+        message: `Incorrect OTP. You have ${remainingAttempts} attempt(s) remaining.`
+      });
+    }
+
+    // OTP verified successfully! Generate single-use resetToken (valid 10 mins)
+    const rawResetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = crypto.createHash('sha256').update(rawResetToken).digest('hex');
+    user.resetPasswordTokenExpires = Date.now() + 10 * 60 * 1000;
+    // OTP can only be used once
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordOtpExpires = undefined;
+    user.resetPasswordOtpAttempts = 0;
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: 'Password set successfully! You can now log in with your new password.'
+      message: 'OTP verified successfully. You may now set your new password.',
+      resetToken: rawResetToken
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Set new password after OTP verification
+ * @route   POST /api/v1/auth/reset-password
+ * @access  Public
+ */
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { email, resetToken, newPassword } = req.body;
+    const targetEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({ email: targetEmail }).select(
+      '+passwordHash +resetPasswordToken +resetPasswordTokenExpires'
+    );
+
+    if (!user || !user.resetPasswordToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset session invalid or expired. Please request a new OTP.'
+      });
+    }
+
+    if (user.resetPasswordTokenExpires < Date.now()) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordTokenExpires = undefined;
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset session has expired. Please verify OTP again.'
+      });
+    }
+
+    // Verify resetToken hash
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    if (hashedToken !== user.resetPasswordToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reset token. Please verify OTP again.'
+      });
+    }
+
+    // Save new hashed password
+    const salt = await bcrypt.genSalt(12);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordTokenExpires = undefined;
+    user.mustChangePassword = false;
+    await user.save();
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully! You can now sign in with your new credentials.',
+      token
     });
   } catch (error) {
     next(error);
@@ -159,7 +330,6 @@ export const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    // Re-fetch user with passwordHash (excluded by default)
     const user = await User.findById(req.user._id).select('+passwordHash');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -174,25 +344,23 @@ export const changePassword = async (req, res, next) => {
       });
     }
 
-    // Prevent setting the same password
-    const isSame = await user.matchPassword(newPassword);
-    if (isSame) {
+    if (currentPassword === newPassword) {
       return res.status(400).json({
         success: false,
-        message: 'New password must be different from your current password'
+        message: 'New password must be different from current password'
       });
     }
 
     const salt = await bcrypt.genSalt(12);
     user.passwordHash = await bcrypt.hash(newPassword, salt);
+    user.mustChangePassword = false;
     await user.save();
 
-    // Issue a fresh JWT so the user doesn't get logged out
     const token = generateToken(user._id);
 
     res.status(200).json({
       success: true,
-      message: 'Password changed successfully',
+      message: 'Password updated successfully',
       token
     });
   } catch (error) {
@@ -201,21 +369,48 @@ export const changePassword = async (req, res, next) => {
 };
 
 /**
- * @desc    Admin resets an assistant's password directly (bypasses email token flow)
- * @route   POST /api/v1/auth/admin/reset-password/:userId
- * @access  Private (Admin only)
+ * Legacy invitation setup password
+ */
+export const setupPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      setupToken: hashedToken,
+      setupTokenExpires: { $gt: Date.now() },
+      isActive: true
+    }).select('+setupToken +setupTokenExpires');
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired password setup link.'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    user.setupToken = undefined;
+    user.setupTokenExpires = undefined;
+    user.mustChangePassword = false;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password set successfully! You can now log in.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin reset password
  */
 export const adminResetPassword = async (req, res, next) => {
   try {
     const { newPassword } = req.body;
-
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be at least 6 characters'
-      });
-    }
-
     const user = await User.findById(req.params.userId);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -223,9 +418,7 @@ export const adminResetPassword = async (req, res, next) => {
 
     const salt = await bcrypt.genSalt(12);
     user.passwordHash = await bcrypt.hash(newPassword, salt);
-    // Clear any pending setup token
-    user.setupToken = undefined;
-    user.setupTokenExpires = undefined;
+    user.mustChangePassword = true;
     await user.save();
 
     res.status(200).json({
@@ -238,40 +431,36 @@ export const adminResetPassword = async (req, res, next) => {
 };
 
 /**
- * @desc    Admin resends setup invitation email to an assistant
- * @route   POST /api/v1/auth/resend-invite/:userId
- * @access  Private (Admin only)
+ * Admin resend invite
  */
 export const resendInvite = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.userId).select('+setupToken +setupTokenExpires');
+    const user = await User.findById(req.params.userId);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (user.passwordHash) {
-      return res.status(400).json({
-        success: false,
-        message: 'This user has already set up their password. Use "Reset Password" instead.'
-      });
-    }
+    const { generateTempPassword } = await import('../utils/constants.js');
+    const { sendAssistantCreatedEmail } = await import('../services/emailService.js');
 
-    // Generate a fresh setup token
-    const rawSetupToken = user.createSetupToken();
+    const tempPassword = generateTempPassword();
+    const salt = await bcrypt.genSalt(12);
+    user.passwordHash = await bcrypt.hash(tempPassword, salt);
+    user.mustChangePassword = true;
     await user.save();
 
-    // Send invitation email
-    const { sendAssistantSetupEmail } = await import('../services/emailService.js');
-    const setupUrl = await sendAssistantSetupEmail({
+    await sendAssistantCreatedEmail({
       toEmail: user.email,
       name: user.name,
-      setupToken: rawSetupToken
+      assistantId: user.assistantId || 'AST-REGEN',
+      tempPassword,
+      loginUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login`
     });
 
     res.status(200).json({
       success: true,
-      message: `Invitation email resent to ${user.email}`,
-      ...(process.env.NODE_ENV === 'development' && { setupUrl })
+      message: `New temporary credentials sent to ${user.email}`,
+      ...(process.env.NODE_ENV === 'development' && { tempPassword })
     });
   } catch (error) {
     next(error);

@@ -1,10 +1,11 @@
+import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import Lab from '../models/Lab.js';
-import { ROLES } from '../utils/constants.js';
-import { sendAssistantSetupEmail } from '../services/emailService.js';
+import { ROLES, generateAssistantId, generateTempPassword } from '../utils/constants.js';
+import { sendAssistantCreatedEmail } from '../services/emailService.js';
 
 /**
- * @desc    Create new Lab Assistant & send account setup email
+ * @desc    Create new Lab Assistant & send account credentials email
  * @route   POST /api/v1/users/assistants
  * @access  Private (Admin only)
  */
@@ -30,44 +31,60 @@ export const createAssistant = async (req, res, next) => {
       });
     }
 
-    // Create assistant (no password yet — will be set via email token)
+    // Generate unique Assistant ID (e.g. AST-7B9F1)
+    let assistantId = generateAssistantId();
+    while (await User.findOne({ assistantId })) {
+      assistantId = generateAssistantId();
+    }
+
+    // Generate secure temporary password
+    const tempPassword = generateTempPassword();
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(tempPassword, salt);
+
+    // Create assistant directly with temporary credentials & forced password change
     const assistant = new User({
       name: name.trim(),
       email: email.trim().toLowerCase(),
       mobile: mobile.trim(),
       role: ROLES.ASSISTANT,
-      assignedLabId
+      assignedLabId,
+      assistantId,
+      passwordHash,
+      mustChangePassword: true,
+      isActive: true
     });
 
-    // Generate a one-time setup token (hashed in DB, raw sent via email)
-    const rawSetupToken = assistant.createSetupToken();
     await assistant.save();
 
-    // Send invitation email (falls back to console.log if SMTP not configured)
-    const setupUrl = await sendAssistantSetupEmail({
+    // Send email with credentials using reusable Nodemailer service
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    await sendAssistantCreatedEmail({
       toEmail: assistant.email,
       name: assistant.name,
-      setupToken: rawSetupToken
+      assistantId: assistant.assistantId,
+      tempPassword,
+      loginUrl: `${clientUrl}/login`
     });
 
     res.status(201).json({
       success: true,
-      message: 'Lab assistant created. Invitation email sent to their address.',
+      message: `Lab assistant created successfully. Account credentials sent to ${assistant.email}.`,
       data: {
         id: assistant._id,
+        assistantId: assistant.assistantId,
         name: assistant.name,
         email: assistant.email,
         mobile: assistant.mobile,
         role: assistant.role,
         isActive: assistant.isActive,
+        tempPassword, // Provided to admin upon creation
         assignedLab: {
           id: lab._id,
           labId: lab.labId,
           labName: lab.labName,
           labBlock: lab.labBlock
-        },
-        // Only expose setup URL in development (useful for testing without SMTP)
-        ...(process.env.NODE_ENV === 'development' && { setupUrl })
+        }
       }
     });
   } catch (error) {
@@ -124,16 +141,7 @@ export const getAssistantById = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        mobile: user.mobile,
-        role: user.role,
-        isActive: user.isActive,
-        assignedLab: user.assignedLabId,
-        createdAt: user.createdAt
-      }
+      data: user
     });
   } catch (error) {
     next(error);
@@ -175,14 +183,7 @@ export const updateAssistant = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Assistant profile updated successfully',
-      data: {
-        id: updated._id,
-        name: updated.name,
-        email: updated.email,
-        mobile: updated.mobile,
-        isActive: updated.isActive,
-        assignedLab: updated.assignedLabId
-      }
+      data: updated
     });
   } catch (error) {
     next(error);

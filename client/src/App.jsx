@@ -25,13 +25,16 @@ import EquipmentManagement from './pages/assistant/EquipmentManagement';
 import CalibrationSchedule from './pages/assistant/CalibrationSchedule';
 import TicketQueue from './pages/assistant/TicketQueue';
 
+// Student Pages
+import StudentDashboard from './pages/student/StudentDashboard';
+
 // Route Guards
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-xs font-semibold text-slate-500">
+      <div className="min-h-screen flex items-center justify-center bg-[#080F20] text-xs font-semibold text-slate-400">
         Authenticating session...
       </div>
     );
@@ -42,8 +45,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // If Admin attempts to access assistant route, or vice-versa
-    return <Navigate to={user.role === 'Admin' ? '/admin' : '/assistant'} replace />;
+    // Redirect user to their own valid dashboard
+    const target =
+      user.role === 'Admin'
+        ? '/admin'
+        : user.role === 'Assistant'
+        ? '/assistant'
+        : '/student';
+    return <Navigate to={target} replace />;
   }
 
   return children;
@@ -90,6 +99,18 @@ function App() {
         <Route path="equipment" element={<EquipmentManagement />} />
         <Route path="calibrations" element={<CalibrationSchedule />} />
         <Route path="tickets" element={<TicketQueue />} />
+      </Route>
+
+      {/* Student Portal (Protected) */}
+      <Route
+        path="/student"
+        element={
+          <ProtectedRoute allowedRoles={['Student']}>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<StudentDashboard />} />
       </Route>
 
       {/* Fallback */}

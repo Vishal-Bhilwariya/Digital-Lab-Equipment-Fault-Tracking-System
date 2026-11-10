@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createPublicTicket,
   getLabTickets,
+  getStudentTickets,
   getTicketById,
   updateTicketStatus,
   trackTicket
@@ -26,11 +27,14 @@ router.get('/track', trackTicket);
 // ── Authenticated Routes ──────────────────────────────────────────────────────
 router.use(protect);
 
+// Student ticket dashboard route (MUST be placed before /:id)
+router.get('/my-tickets', authorizeRole(ROLES.STUDENT), getStudentTickets);
+
 router.route('/')
   .get(authorizeRole(ROLES.ASSISTANT, ROLES.ADMIN), getLabTickets);
 
 router.route('/:id')
-  .get(authorizeRole(ROLES.ASSISTANT, ROLES.ADMIN), validateMongoId, getTicketById);
+  .get(authorizeRole(ROLES.ASSISTANT, ROLES.ADMIN, ROLES.STUDENT), validateMongoId, getTicketById);
 
 // Both Admin and Assistant can update ticket status
 router.patch(
