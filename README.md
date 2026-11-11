@@ -668,7 +668,7 @@ Terminal 2: cd client && npm run dev   ← frontend at localhost:5173
 
 | 👤 Name               | 🎓 Role                              |
 |----------------------|--------------------------------------|
-| **Vishal Bhilwariya** | Team Lead & Full-Stack Developer     |
+| **Vishal** | Team Lead & Full-Stack Developer     |
 | **Mohit Kumar**       | Backend Developer                    |
 | **Kunal Kumar**       | Frontend Developer                   |
 | **Drishti Ahuja**     | UI/UX & Frontend                     |
