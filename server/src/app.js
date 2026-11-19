@@ -22,20 +22,33 @@ const app = express();
 app.use(helmet());
 
 // ── CORS ───────────────────────────────────────────────────────────────────
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
+const rawClientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const configuredOrigins = rawClientUrl
+  .split(',')
+  .map((url) => url.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+const defaultOrigins = [
+  'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:4173' // Vite preview port
 ];
+
+const allowedOrigins = Array.from(new Set([...configuredOrigins, ...defaultOrigins]));
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, Postman)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      // In development, be permissive for local network testing (mobile QR scan)
-      if (process.env.NODE_ENV === 'development') return callback(null, true);
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      if (
+        allowedOrigins.includes(cleanOrigin) ||
+        cleanOrigin.endsWith('.vercel.app') ||
+        process.env.NODE_ENV === 'development'
+      ) {
+        return callback(null, true);
+      }
       callback(new Error(`CORS: Origin ${origin} is not allowed`));
     },
     credentials: true,
@@ -79,7 +92,19 @@ const authLimiter = rateLimit({
   }
 });
 
-// ── Health check endpoint (always available, even without DB) ──────────────
+// ── Root & Health check endpoints (available even without DB) ──────────────
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'online',
+    service: 'LabTrack Pro API',
+    health: '/api/health'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.redirect('/api/health');
+});
+
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
   // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
