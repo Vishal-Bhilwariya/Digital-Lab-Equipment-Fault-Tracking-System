@@ -1,7 +1,19 @@
 import axios from 'axios';
 
+// Determine API base URL:
+// 1. In local dev (no VITE_API_URL), defaults to '/api/v1' (forwarded to localhost:5000 by Vite proxy)
+// 2. In production, ensures trailing slashes are removed and '/api/v1' is automatically appended if omitted
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl) {
+    return '/api/v1';
+  }
+  const cleanUrl = envUrl.replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json'
   }
